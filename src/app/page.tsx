@@ -72,26 +72,25 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-slate-950">
       <TopNav />
 
-      {/* Hero Section with Blockchain Background */}
-      <section className="relative overflow-hidden py-20 md:py-32 bg-hero bg-cover bg-center">
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute top-20 right-0 w-96 h-96 gradient-primary rounded-full blur-3xl opacity-20 animate-float" />
-        <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-secondary rounded-full blur-3xl opacity-10 animate-float animation-delay-200" />
+      {/* Hero Section */}
+      <section className="relative overflow-hidden py-20 md:py-32">
+        <div className="absolute inset-0 gradient-primary opacity-5" />
+        <div className="absolute top-20 right-0 w-96 h-96 gradient-primary rounded-full blur-3xl opacity-10" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-12 animate-fade-in-up">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white text-balance">
+          <div className="text-center mb-12">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 gradient-text text-balance">
               Pendanaan Kreatif yang Transparan & On-Chain
             </h1>
-            <p className="text-xl text-gray-100 mb-8 max-w-2xl mx-auto text-balance animate-fade-in-up animation-delay-100">
+            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto text-balance">
               Empowering creators, connecting supporters, powered by Web3 transparency.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animation-delay-200">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="/explore" className="btn-gradient inline-flex items-center justify-center gap-2">
                 Explore Projects
                 <ArrowRight className="w-4 h-4" />
               </a>
-              <button className="px-6 py-3 rounded-lg font-semibold border-2 border-white text-white hover:bg-white hover:text-slate-900 transition-all duration-300">
+              <button className="px-6 py-3 rounded-lg font-semibold border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 dark:border-accent dark:text-accent dark:hover:bg-accent dark:hover:text-slate-900">
                 Start a Project
               </button>
             </div>
@@ -99,11 +98,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How It Works - Extended with Blockchain Background */}
-      <section className="py-16 md:py-24 bg-hero bg-cover bg-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <h2 className="text-4xl font-bold text-center mb-16 animate-fade-in-up text-white">How It Works</h2>
+      {/* How It Works */}
+      <section className="py-16 md:py-24 bg-gray-50 dark:bg-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl font-bold text-center mb-16">How It Works</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
@@ -122,13 +120,9 @@ export default function Home() {
                 title: "Smart Contracts Release Funds",
                 description: "Funds release transparently when milestones are verified and completed.",
               },
-            ].map((item, index) => (
-              <div
-                key={item.step}
-                className="relative animate-fade-in-up"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="card-glow rounded-2xl bg-white/95 dark:bg-slate-800/95 p-8 backdrop-blur-sm">
+            ].map((item) => (
+              <div key={item.step} className="relative">
+                <div className="card-glow rounded-2xl bg-white dark:bg-slate-800 p-8">
                   <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center text-white font-bold text-lg mb-4">
                     {item.step}
                   </div>
@@ -145,41 +139,35 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-900 dark:to-slate-800">
-        <div className="absolute inset-0 bg-gradient-mesh opacity-50" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <h2 className="text-4xl font-bold text-center mb-16 animate-fade-in-up">Why CreatiFi?</h2>
+      <section className="py-16 md:py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl font-bold text-center mb-16">Why CreatiFi?</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Lock className="w-6 h-6" />,
-                title: "Escrow Smart Contract",
-                description: "Funds are secured in smart contracts until milestones are verified and completed.",
-              },
-              {
-                icon: <Award className="w-6 h-6" />,
-                title: "NFT Proof of Support",
-                description: "Supporters receive unique NFT badges as proof of their contribution and support.",
-              },
-              {
-                icon: <Zap className="w-6 h-6" />,
-                title: "Transparent Royalty System",
-                description: "All transactions and fund flows are visible on-chain for complete transparency.",
-              },
-            ].map((feature, index) => (
-              <FeatureCard key={index} icon={feature.icon} title={feature.title} description={feature.description} />
-            ))}
+            <FeatureCard
+              icon={<Lock className="w-6 h-6" />}
+              title="Escrow Smart Contract"
+              description="Funds are secured in smart contracts until milestones are verified and completed."
+            />
+            <FeatureCard
+              icon={<Award className="w-6 h-6" />}
+              title="NFT Proof of Support"
+              description="Supporters receive unique NFT badges as proof of their contribution and support."
+            />
+            <FeatureCard
+              icon={<Zap className="w-6 h-6" />}
+              title="Transparent Royalty System"
+              description="All transactions and fund flows are visible on-chain for complete transparency."
+            />
           </div>
         </div>
       </section>
 
       {/* Trending Projects */}
-      <section className="py-16 md:py-24 bg-gray-50 dark:bg-slate-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-30" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <section className="py-16 md:py-24 bg-gray-50 dark:bg-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-12">
-            <h2 className="text-4xl font-bold animate-fade-in-up">Trending Projects</h2>
+            <h2 className="text-4xl font-bold">Trending Projects</h2>
             <a
               href="/explore"
               className="text-primary hover:text-secondary transition-colors font-semibold flex items-center gap-2"
@@ -190,10 +178,8 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {trendingProjects.map((project, index) => (
-              <div key={project.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
-                <ProjectCard {...project} />
-              </div>
+            {trendingProjects.map((project) => (
+              <ProjectCard key={project.id} {...project} />
             ))}
           </div>
         </div>

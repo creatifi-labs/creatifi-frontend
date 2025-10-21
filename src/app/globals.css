@@ -2,28 +2,264 @@
 @tailwind components;
 @tailwind utilities;
 
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f9fafb;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    --primary: #335cff;
+    --primary-foreground: #ffffff;
+    --secondary: #6e45e2;
+    --secondary-foreground: #ffffff;
+    --accent: #f4b400;
+    --accent-foreground: #0f172a;
+    --muted: #e5e7eb;
+    --muted-foreground: #6b7280;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e5e7eb;
+    --input: #f3f4f6;
+    --ring: #335cff;
+    --chart-1: #335cff;
+    --chart-2: #6e45e2;
+    --chart-3: #88d3ce;
+    --chart-4: #f4b400;
+    --chart-5: #10b981;
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: #0f172a;
+    --foreground: #f9fafb;
+    --card: #1e293b;
+    --card-foreground: #f9fafb;
+    --popover: #1e293b;
+    --popover-foreground: #f9fafb;
+    --primary: #335cff;
+    --primary-foreground: #0f172a;
+    --secondary: #6e45e2;
+    --secondary-foreground: #ffffff;
+    --accent: #f4b400;
+    --accent-foreground: #0f172a;
+    --muted: #334155;
+    --muted-foreground: #cbd5e1;
+    --destructive: #f87171;
+    --destructive-foreground: #0f172a;
+    --border: #334155;
+    --input: #1e293b;
+    --ring: #335cff;
+    --chart-1: #335cff;
+    --chart-2: #6e45e2;
+    --chart-3: #88d3ce;
+    --chart-4: #f4b400;
+    --chart-5: #10b981;
+  }
+
+  * {
+    @apply border-gray-200 dark:border-slate-700;
+  }
+
+  body {
+    @apply bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, #335cff 0%, #6e45e2 60%, #88d3ce 100%);
+  }
+
+  .gradient-glow {
+    box-shadow: 0 10px 25px -5px rgba(51, 92, 255, 0.3);
+  }
+
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+
+  .glass-effect-dark {
+    @apply bg-slate-900/80 backdrop-blur-md border border-slate-700/20;
+  }
+
+  .card-glow {
+    box-shadow: 0 4px 6px -1px rgba(51, 92, 255, 0.1),
+      0 2px 4px -1px rgba(51, 92, 255, 0.06);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .card-glow:hover {
+    box-shadow: 0 20px 25px -5px rgba(51, 92, 255, 0.15),
+      0 10px 10px -5px rgba(51, 92, 255, 0.08);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #335cff 0%, #6e45e2 60%, #88d3ce 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .btn-gradient {
+    @apply bg-gradient-to-r from-[#335cff] to-[#6e45e2] text-white font-semibold rounded-lg px-6 py-3 hover:shadow-lg transition-all duration-300 hover:scale-105;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .slide-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.6s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.6s ease-out;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .bg-gradient-mesh {
+    background: linear-gradient(
+      135deg,
+      rgba(51, 92, 255, 0.15) 0%,
+      rgba(110, 69, 226, 0.15) 50%,
+      rgba(136, 211, 206, 0.15) 100%
+    );
+  }
+
+  .bg-dots {
+    background-image: radial-gradient(circle, rgba(51, 92, 255, 0.25) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .bg-grid {
+    background-image: linear-gradient(rgba(51, 92, 255, 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(51, 92, 255, 0.15) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .bg-hero {
+    background-image: url("/blockchain-hero.jpg");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+
+  .bg-explore {
+    background-image: url("/crypto-explore.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .bg-pattern {
+    background-image: url("/blockchain-pattern.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .bg-dashboard {
+    background-image: url("/dashboard-bg.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .bg-overlay {
+    position: relative;
+  }
+
+  .bg-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.8);
+    z-index: 0;
+  }
 }

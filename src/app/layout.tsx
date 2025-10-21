@@ -1,21 +1,29 @@
-import "./globals.css";
-import Web3Provider from "./providers/Web3Provider";
+import type React from "react"
+import type { Metadata } from "next"
+import { Inter, Roboto_Mono } from "next/font/google"
+import { Analytics } from "@vercel/analytics/next"
+import "./globals.css"
 
-export const metadata = {
-  title: "CreatiFi",
-  description: "Soulbound crowdfunding with reputation",
-};
+const geist = Inter({ subsets: ["latin"] })
+const geistMono = Roboto_Mono({ subsets: ["latin"] })
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const metadata: Metadata = {
+  title: "CreatiFi - Decentralized Creative Funding",
+  description: "Empowering creators, connecting supporters, powered by Web3 transparency",
+  generator: "v0.app",
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-zinc-950 text-zinc-100">
-        <Web3Provider>
-          <div className="max-w-5xl mx-auto px-4 py-6">
-            {children}
-          </div>
-        </Web3Provider>
+      <body className={`${geist.className} font-sans antialiased`}>
+        {children}
+        <Analytics />
       </body>
     </html>
-  );
+  )
 }

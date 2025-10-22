@@ -1,31 +1,22 @@
-import type React from "react";
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
-import { Analytics } from "@vercel/analytics/next";
-import { Web3Provider } from "@/providers/Web3Provider"; 
+import { Inter } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({ subsets: ["latin"] });
+
 export const metadata: Metadata = {
-  title: "CreatiFi - Decentralized Creative Funding",
-  description:
-    "Empowering creators, connecting supporters, powered by Web3 transparency",
-  generator: "v0.app",
+	title: "CreatiFi",
+	description: "Decentralized crowdfunding platform",
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${GeistSans.className} ${GeistMono.className} font-sans antialiased`}
-      >
-        <Web3Provider>
-          {children}
-          <Analytics />
-        </Web3Provider>
-      </body>
-    </html>
-  );
+	children,
+}: Readonly<{
+	children: React.ReactNode;
+}>) {
+	return (
+		<html lang="en">
+			<body className={inter.className}>{children}</body>
+		</html>
+	);
 }

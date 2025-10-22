@@ -1,4 +1,7 @@
+"use client"
+
 import type React from "react"
+import { useState, useEffect } from "react"
 interface AnalyticsCardProps {
   label: string
   value: string | number
@@ -7,6 +10,20 @@ interface AnalyticsCardProps {
 }
 
 export function AnalyticsCard({ label, value, icon, trend }: AnalyticsCardProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
+        <div className="h-24 animate-pulse bg-gray-200 dark:bg-slate-700 rounded"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
       <div className="flex items-start justify-between">

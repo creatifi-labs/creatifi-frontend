@@ -1,17 +1,20 @@
-import { fileURLToPath } from "node:url";
-import path from "node:path";
+// next.config.mjs
+import path from "path";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const wagmiDir = path.dirname(require.resolve("wagmi/package.json"));
+console.log("[next.config.mjs] wagmiDir ->", wagmiDir);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
   webpack: (config) => {
     config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      // Penting: pakai 'wagmi$' (EXACT match), sehingga 'wagmi/chains' tetap ke node_modules
-      "wagmi$": path.resolve(__dirname, "src/wagmi-shim.ts"),
+      ...(config.resolve.alias ?? {}),
+      wagmi: path.resolve(process.cwd(), "wagmi-shim.mjs"),
+      "wagmi$": path.resolve(process.cwd(), "wagmi-shim.mjs"),
+      "wagmi-original": wagmiDir,
+      "wagmi-original$": wagmiDir,
     };
     return config;
   },

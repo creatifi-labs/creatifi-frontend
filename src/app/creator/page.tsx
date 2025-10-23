@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { TopNav } from "@/components/top-nav"
 import { Footer } from "@/components/footer"
 import { CreatorProjectCard } from "@/components/creator-project-card"
 import { AnalyticsCard } from "@/components/analytics-card"
-import { Users, TrendingUp, Award, Plus, Upload, CheckCircle2, Wallet, Loader2 } from "lucide-react"
+import { Users, TrendingUp, Award, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { useCreatorProjects } from "@/hooks/useCreatorProjects"
 
 export default function CreatorDashboard() {
@@ -100,7 +100,7 @@ export default function CreatorDashboard() {
 					{/* Loading State */}
 					{loading && (
 						<div className="flex items-center justify-center py-12">
-							<Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+							<div className="w-8 h-8 animate-spin text-blue-600" />
 							<span className="ml-3 text-gray-600 dark:text-gray-400">Loading projects...</span>
 						</div>
 					)}
@@ -144,48 +144,6 @@ export default function CreatorDashboard() {
 							))}
 						</div>
 					)}
-				</div>
-
-				{/* Quick Actions */}
-				<div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-					<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6 text-center">
-						<div className="w-12 h-12 gradient-primary rounded-lg flex items-center justify-center text-white mx-auto mb-4">
-							<Upload className="w-6 h-6" />
-						</div>
-						<h3 className="font-bold text-lg mb-2">Upload Progress</h3>
-						<p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-							Share updates with your supporters about project progress.
-						</p>
-						<button className="text-primary hover:text-secondary font-semibold transition-colors">
-							Upload Now →
-						</button>
-					</div>
-
-					<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6 text-center">
-						<div className="w-12 h-12 gradient-primary rounded-lg flex items-center justify-center text-white mx-auto mb-4">
-							<CheckCircle2 className="w-6 h-6" />
-						</div>
-						<h3 className="font-bold text-lg mb-2">Submit for Verification</h3>
-						<p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-							Request milestone verification to release funds to your wallet.
-						</p>
-						<button className="text-primary hover:text-secondary font-semibold transition-colors">
-							Submit →
-						</button>
-					</div>
-
-					<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6 text-center">
-						<div className="w-12 h-12 gradient-primary rounded-lg flex items-center justify-center text-white mx-auto mb-4">
-							<Wallet className="w-6 h-6" />
-						</div>
-						<h3 className="font-bold text-lg mb-2">Withdraw Funds</h3>
-						<p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-							Withdraw verified milestone funds to your connected wallet.
-						</p>
-						<button className="text-primary hover:text-secondary font-semibold transition-colors">
-							Withdraw →
-						</button>
-					</div>
 				</div>
 			</div>
 

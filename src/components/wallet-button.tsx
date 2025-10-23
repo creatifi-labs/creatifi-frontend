@@ -10,7 +10,14 @@ export function WalletButton() {
 
   useEffect(() => {
     setMounted(true);
-    checkConnection();
+
+    // Check localStorage untuk disconnect flag
+    const hasDisconnected = localStorage.getItem("wallet_disconnected") === "true";
+
+    // Only auto-connect if user hasn't manually disconnected
+    if (!hasDisconnected) {
+      checkConnection();
+    }
   }, []);
 
   const checkConnection = async () => {
@@ -54,6 +61,8 @@ export function WalletButton() {
 
       if (accounts && accounts.length > 0) {
         setAccount(accounts[0]);
+        // Clear disconnect flag when user manually connects
+        localStorage.removeItem("wallet_disconnected");
         console.log("Connected:", accounts[0]);
       } else {
         alert("No accounts found");
@@ -76,6 +85,9 @@ export function WalletButton() {
 
   const disconnectWallet = () => {
     setAccount("");
+    // Save disconnect state to localStorage
+    localStorage.setItem("wallet_disconnected", "true");
+    console.log("Wallet disconnected");
   };
 
   const shortenAddress = (addr: string) =>

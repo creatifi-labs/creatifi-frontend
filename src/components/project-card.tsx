@@ -10,7 +10,7 @@ interface ProjectCardProps {
 	creator: string
 	goal: number
 	raised: number
-	progress: number
+	progress?: number // Buat optional
 	status: "active" | "funded" | "closed"
 	imageUrl?: string
 	description?: string
@@ -22,7 +22,7 @@ export function ProjectCard({
 	creator,
 	goal,
 	raised,
-	progress,
+	progress = 0, // DEFAULT VALUE = 0
 	status,
 	imageUrl,
 	description,
@@ -108,7 +108,7 @@ export function ProjectCard({
 					<div className="flex justify-between text-sm mb-2">
 						<span className="text-gray-600 dark:text-gray-400">Progress</span>
 						<span className="font-semibold">
-							{raised.toFixed(4)} / {goal.toFixed(4)} ETH
+							{(raised || 0).toFixed(4)} / {(goal || 0).toFixed(4)} ETH
 						</span>
 					</div>
 					<div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">

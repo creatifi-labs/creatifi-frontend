@@ -52,7 +52,7 @@ export function CreatorProjectCard({
 	const currentStatus = statusConfig[status] || statusConfig.active
 
 	const handleManageProject = () => {
-		router.push(`/project/${id}`)
+		router.push(`/creator/manage/${id}`)
 	}
 
 	return (

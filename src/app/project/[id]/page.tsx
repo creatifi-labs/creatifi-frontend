@@ -4,11 +4,19 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { TopNav } from "@/components/top-nav"
 import { Footer } from "@/components/footer"
-import { getProject, getMilestone, getProjectRewardURI, supportProject } from "@/lib/contracts/factory"
+import { 
+  getProject, 
+  getMilestone, 
+  getProjectRewardURI, 
+  supportProject,
+  voteMilestoneCompletion,
+  finalizeMilestoneVote,
+  isSupporter
+} from "@/lib/contracts/factory"
 import { fetchMetadataFromIPFS, ipfsToHttp } from "@/lib/ipfs"
 import { formatEther, parseEther } from "viem"
 import Image from "next/image"
-import { Loader2, Check, Lock } from "lucide-react"
+import { Loader2, Check, Lock, ThumbsUp, ThumbsDown, Clock } from "lucide-react"
 
 interface ProjectData {
 	creator: string
@@ -24,6 +32,13 @@ interface MilestoneData {
 	amount: bigint
 	released: boolean
 	completed: boolean
+	status: number // 0=Pending, 1=Proposed, 2=Completed
+	proofURI: string
+	agreeCount: bigint
+	disagreeCount: bigint
+	totalVotes: bigint
+	voteDeadline: bigint
+	finalized: boolean
 }
 
 export default function ProjectDetailPage() {
@@ -35,6 +50,9 @@ export default function ProjectDetailPage() {
 	const [loading, setLoading] = useState(true)
 	const [supporting, setSupporting] = useState(false)
 	const [supportAmount, setSupportAmount] = useState("")
+	const [isUserSupporter, setIsUserSupporter] = useState(false)
+	const [votingOnMilestone, setVotingOnMilestone] = useState<number | null>(null)
+	const [finalizingMilestone, setFinalizingMilestone] = useState<number | null>(null)
 
 	const [project, setProject] = useState<ProjectData | null>(null)
 	const [milestones, setMilestones] = useState<MilestoneData[]>([])
@@ -96,6 +114,13 @@ export default function ProjectDetailPage() {
 				amount: m.amount,
 				released: m.released,
 				completed: m.completed,
+				status: m.status,
+				proofURI: m.proofURI,
+				agreeCount: m.agreeCount,
+				disagreeCount: m.disagreeCount,
+				totalVotes: m.totalVotes,
+				voteDeadline: m.voteDeadline,
+				finalized: m.finalized,
 			}))
 
 			console.log('Formatted milestones:', formattedMilestones)
@@ -114,6 +139,16 @@ export default function ProjectDetailPage() {
 				}
 			} catch (metaErr) {
 				console.error("Failed to fetch metadata:", metaErr)
+			}
+
+			// Check if current user is supporter
+			if (account) {
+				try {
+					const supporter = await isSupporter(BigInt(projectId), account)
+					setIsUserSupporter(supporter)
+				} catch (err) {
+					console.error('Failed to check supporter status:', err)
+				}
 			}
 
 			console.log('=== FETCH COMPLETE ===')
@@ -149,18 +184,34 @@ export default function ProjectDetailPage() {
 		try {
 			setSupporting(true)
 
-			// User input amount already includes fee (total to pay)
-			// Contract will split: ~97.56% to project, ~2.44% to platform
-			const totalAmount = parseFloat(supportAmount)
+			// User input adalah NET AMOUNT yang mau di-contribute ke project
+			const netAmount = parseFloat(supportAmount)
+			
+			// Calculate fee: 25/1025 ≈ 2.439% dari total
+			// Jika user mau contribute X ETH, dia harus bayar: X / (1 - fee_rate)
+			// fee_rate = 25/1025 ≈ 0.02439
+			// total = netAmount / (1 - 0.02439) = netAmount * 1.025
+			const feeNumerator = 25
+			const feeDenominator = 1025
+			const totalToPay = netAmount * (feeDenominator / (feeDenominator - feeNumerator))
+			const fee = totalToPay - netAmount
 
-			console.log(`Supporting with ${totalAmount} ETH total`)
+			console.log(`Net contribution: ${netAmount} ETH`)
+			console.log(`Platform fee: ${fee.toFixed(6)} ETH`)
+			console.log(`Total to pay: ${totalToPay.toFixed(6)} ETH`)
 
 			const hash = await supportProject(
 				BigInt(projectId),
-				parseEther(totalAmount.toString())
+				parseEther(totalToPay.toString())
 			)
 
-			alert(`Support successful!\nTransaction: ${hash}`)
+			alert(
+				`Support successful!\n` +
+				`Net contribution: ${netAmount} ETH\n` +
+				`Platform fee: ${fee.toFixed(6)} ETH\n` +
+				`Total paid: ${totalToPay.toFixed(6)} ETH\n` +
+				`Transaction: ${hash}`
+			)
 
 			// Refresh project data
 			await fetchProjectDetails()
@@ -172,6 +223,91 @@ export default function ProjectDetailPage() {
 			setSupporting(false)
 		}
 	}
+
+	const handleVote = async (milestoneIndex: number, agree: boolean) => {
+		if (!account) {
+			alert("Please connect your wallet")
+			return
+		}
+
+		if (!isUserSupporter) {
+			alert("Only supporters can vote")
+			return
+		}
+
+		try {
+			setVotingOnMilestone(milestoneIndex)
+
+			const hash = await voteMilestoneCompletion(
+				BigInt(projectId),
+				milestoneIndex,
+				agree
+			)
+
+			alert(`Vote submitted!\nTransaction: ${hash}`)
+			await fetchProjectDetails()
+		} catch (error: any) {
+			console.error('Error voting:', error)
+			alert(`Failed to vote: ${error.message || "Unknown error"}`)
+		} finally {
+			setVotingOnMilestone(null)
+		}
+	}
+
+	const handleFinalize = async (milestoneIndex: number) => {
+		try {
+			setFinalizingMilestone(milestoneIndex)
+
+			const hash = await finalizeMilestoneVote(
+				BigInt(projectId),
+				milestoneIndex
+			)
+
+			alert(`Voting finalized!\nTransaction: ${hash}`)
+			await fetchProjectDetails()
+		} catch (error: any) {
+			console.error('Error finalizing:', error)
+			alert(`Failed to finalize: ${error.message || "Unknown error"}`)
+		} finally {
+			setFinalizingMilestone(null)
+		}
+	}
+
+	const getTimeRemaining = (deadline: bigint) => {
+		const now = Math.floor(Date.now() / 1000)
+		const deadlineSeconds = Number(deadline)
+		const remaining = deadlineSeconds - now
+
+		if (remaining <= 0) return { text: "Voting Ended", expired: true, seconds: 0 }
+
+		const days = Math.floor(remaining / 86400)
+		const hours = Math.floor((remaining % 86400) / 3600)
+		const minutes = Math.floor((remaining % 3600) / 60)
+		const seconds = remaining % 60
+
+		let text = ""
+		if (days > 0) text = `${days}d ${hours}h remaining`
+		else if (hours > 0) text = `${hours}h ${minutes}m remaining`
+		else if (minutes > 0) text = `${minutes}m ${seconds}s remaining`
+		else text = `${seconds}s remaining`
+
+		return { text, expired: false, seconds: remaining }
+	}
+
+	// Auto-refresh countdown every second for active votings
+	useEffect(() => {
+		if (!milestones.length) return
+
+		const hasActiveVoting = milestones.some(m => m.status === 1 && !m.finalized)
+		if (!hasActiveVoting) return
+
+		const interval = setInterval(() => {
+			// Force re-render to update countdown
+			setMilestones(prev => [...prev])
+		}, 1000)
+
+		return () => clearInterval(interval)
+	}, [milestones])
 
 	if (loading) {
 		return (
@@ -271,51 +407,204 @@ export default function ProjectDetailPage() {
 						<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
 							<h2 className="text-2xl font-bold mb-4">Milestones</h2>
 							<div className="space-y-4">
-								{milestones.map((milestone) => (
-									<div
-										key={milestone.index}
-										className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-slate-700 rounded-lg"
-									>
+								{milestones.map((milestone) => {
+									const isVoting = milestone.status === 1 && !milestone.finalized
+									const canVote = isUserSupporter && isVoting
+									const canFinalize = isVoting && Number(milestone.voteDeadline) <= Math.floor(Date.now() / 1000)
+									const votePercentage = milestone.totalVotes > 0n 
+										? Number((milestone.agreeCount * 100n) / milestone.totalVotes)
+										: 0
+
+									return (
 										<div
-											className={`w-10 h-10 rounded-full flex items-center justify-center ${
-												milestone.completed
-													? "bg-green-500 text-white"
-													: milestone.released
-													? "bg-blue-500 text-white"
-													: "bg-gray-300 dark:bg-slate-600 text-gray-600 dark:text-gray-400"
-											}`}
+											key={milestone.index}
+											className="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg space-y-3"
 										>
-											{milestone.completed ? (
-												<Check className="w-5 h-5" />
-											) : milestone.released ? (
-												<span>{milestone.index + 1}</span>
-											) : (
-												<Lock className="w-5 h-5" />
+											<div className="flex items-center gap-4">
+												<div
+													className={`w-10 h-10 rounded-full flex items-center justify-center ${
+														milestone.completed
+															? "bg-green-500 text-white"
+															: milestone.released
+															? "bg-blue-500 text-white"
+															: "bg-gray-300 dark:bg-slate-600 text-gray-600 dark:text-gray-400"
+													}`}
+												>
+													{milestone.completed ? (
+														<Check className="w-5 h-5" />
+													) : milestone.released ? (
+														<span>{milestone.index + 1}</span>
+													) : (
+														<Lock className="w-5 h-5" />
+													)}
+												</div>
+												<div className="flex-1">
+													<h3 className="font-semibold">{milestone.name}</h3>
+													<p className="text-sm text-gray-500 dark:text-gray-400">
+														{formatEther(milestone.amount)} ETH
+													</p>
+												</div>
+												<div>
+													{milestone.completed ? (
+														<span className="text-xs px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+															Completed
+														</span>
+													) : isVoting ? (
+														<span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full">
+															Voting
+														</span>
+													) : milestone.released ? (
+														<span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+															In Progress
+														</span>
+													) : (
+														<span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 rounded-full">
+															Locked
+														</span>
+													)}
+												</div>
+											</div>
+
+											{/* Voting Section */}
+											{isVoting && (
+												<div className="mt-3 p-3 bg-white dark:bg-slate-600 rounded-lg">
+													<div className="flex items-center justify-between mb-2">
+														<span className="text-sm font-medium">Voting Progress</span>
+														<span className={`text-xs flex items-center gap-1 ${
+															getTimeRemaining(milestone.voteDeadline).expired
+																? "text-red-600 dark:text-red-400 font-semibold"
+																: "text-gray-500 dark:text-gray-400"
+														}`}>
+															<Clock className="w-3 h-3" />
+															{getTimeRemaining(milestone.voteDeadline).text}
+														</span>
+													</div>
+
+													{/* Expired Warning */}
+													{getTimeRemaining(milestone.voteDeadline).expired && (
+														<div className="mb-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-800 dark:text-yellow-200">
+															<strong>⚠️ Voting period ended!</strong> Anyone can finalize the voting now.
+														</div>
+													)}
+
+													{/* Progress Bar */}
+													<div className="mb-3">
+														<div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+															<div
+																className="bg-green-500 h-2 rounded-full transition-all"
+																style={{ width: `${votePercentage}%` }}
+															/>
+														</div>
+														<div className="flex justify-between text-xs mt-1">
+															<span className="text-green-600 dark:text-green-400">
+																Agree: {milestone.agreeCount.toString()} ({votePercentage.toFixed(1)}%)
+															</span>
+															<span className="text-red-600 dark:text-red-400">
+																Disagree: {milestone.disagreeCount.toString()}
+															</span>
+														</div>
+														<div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+															Total Votes: {milestone.totalVotes.toString()}
+															{milestone.totalVotes === 0n && " (No votes yet)"}
+														</div>
+													</div>
+
+													{/* Proof Link */}
+													{milestone.proofURI && (
+														<div className="mb-3">
+															<a
+																href={ipfsToHttp(milestone.proofURI)}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+															>
+																<span>📄 View Progress Proof</span>
+																<span>→</span>
+															</a>
+														</div>
+													)}
+
+													{/* Vote Buttons */}
+													{canVote && !canFinalize && (
+														<div className="flex gap-2">
+															<button
+																onClick={() => handleVote(milestone.index, true)}
+																disabled={votingOnMilestone === milestone.index}
+																className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm disabled:opacity-50"
+															>
+																{votingOnMilestone === milestone.index ? (
+																	<Loader2 className="w-4 h-4 animate-spin" />
+																) : (
+																	<ThumbsUp className="w-4 h-4" />
+																)}
+																Agree
+															</button>
+															<button
+																onClick={() => handleVote(milestone.index, false)}
+																disabled={votingOnMilestone === milestone.index}
+																className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm disabled:opacity-50"
+															>
+																{votingOnMilestone === milestone.index ? (
+																	<Loader2 className="w-4 h-4 animate-spin" />
+																) : (
+																	<ThumbsDown className="w-4 h-4" />
+																)}
+																Disagree
+															</button>
+														</div>
+													)}
+
+													{/* Finalize Button */}
+													{canFinalize && (
+														<div className="space-y-2">
+															<div className="p-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded text-xs text-purple-800 dark:text-purple-200">
+																{milestone.totalVotes === 0n ? (
+																	<>
+																		<strong>⚠️ No votes received!</strong> If finalized, milestone will be reset and creator can propose again.
+																	</>
+																) : votePercentage <= 50 ? (
+																	<>
+																		<strong>⚠️ Less than 50% agree!</strong> If finalized, milestone will be reset and creator can propose again.
+																	</>
+																) : (
+																	<>
+																		<strong>✓ More than 50% agree!</strong> If finalized, milestone will be marked as completed.
+																	</>
+																)}
+															</div>
+															<button
+																onClick={() => handleFinalize(milestone.index)}
+																disabled={finalizingMilestone === milestone.index}
+																className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50"
+															>
+																{finalizingMilestone === milestone.index ? (
+																	<Loader2 className="w-4 h-4 animate-spin" />
+																) : (
+																	"Finalize Voting"
+																)}
+															</button>
+														</div>
+													)}
+
+													{!canVote && !canFinalize && (
+														<p className="text-xs text-center text-gray-500 dark:text-gray-400">
+															{isUserSupporter ? "You have already voted" : "Only supporters can vote"}
+														</p>
+													)}
+												</div>
+											)}
+
+											{/* Reset Notice (when milestone back to Pending after failed vote) */}
+											{milestone.released && !milestone.completed && milestone.status === 0 && milestone.finalized && (
+												<div className="mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+													<p className="text-xs text-orange-800 dark:text-orange-200">
+														<strong>🔄 Voting period expired or failed!</strong> Creator needs to propose completion again with new proof.
+													</p>
+												</div>
 											)}
 										</div>
-										<div className="flex-1">
-											<h3 className="font-semibold">{milestone.name}</h3>
-											<p className="text-sm text-gray-500 dark:text-gray-400">
-												{formatEther(milestone.amount)} ETH
-											</p>
-										</div>
-										<div>
-											{milestone.completed ? (
-												<span className="text-xs px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
-													Completed
-												</span>
-											) : milestone.released ? (
-												<span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
-													In Progress
-												</span>
-											) : (
-												<span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 rounded-full">
-													Locked
-												</span>
-											)}
-										</div>
-									</div>
-								))}
+									)
+								})}
 							</div>
 						</div>
 					</div>
@@ -350,7 +639,7 @@ export default function ProjectDetailPage() {
 								<form onSubmit={handleSupport} className="space-y-4">
 									<div>
 										<label className="block text-sm font-medium mb-2">
-											Total Amount to Pay (ETH)
+											Contribution Amount (ETH)
 										</label>
 										<input
 											type="number"
@@ -362,9 +651,26 @@ export default function ProjectDetailPage() {
 											disabled={supporting}
 										/>
 										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-											Contract automatically deducts 2.5% platform fee
+											Amount that will go to the project (excluding platform fee)
 										</p>
 									</div>
+
+									{/* Fee Breakdown */}
+									{supportAmount && parseFloat(supportAmount) > 0 && (
+										<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
+											<p className="text-gray-700 dark:text-gray-300 mb-1">
+												<strong>Contribution to project:</strong> {supportAmount} ETH
+											</p>
+											<p className="text-gray-700 dark:text-gray-300 mb-1">
+												<strong>Platform fee (2.5%):</strong>{" "}
+												{(parseFloat(supportAmount) * (25 / (1025 - 25))).toFixed(6)} ETH
+											</p>
+											<p className="text-gray-700 dark:text-gray-300 font-semibold mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+												<strong>Total to pay:</strong>{" "}
+												{(parseFloat(supportAmount) * (1025 / 1000)).toFixed(6)} ETH
+											</p>
+										</div>
+									)}
 
 									<button
 										type="submit"

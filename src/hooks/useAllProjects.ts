@@ -68,10 +68,8 @@ export function useAllProjects() {
 
   const fetchSingleProject = async (projectId: number): Promise<ExploreProject | null> => {
     try {
-      // Fetch project details
       const project = await getProject(BigInt(projectId));
 
-      // Fetch all 3 milestones
       const milestonePromises = [
         getMilestone(BigInt(projectId), 0),
         getMilestone(BigInt(projectId), 1),
@@ -79,11 +77,8 @@ export function useAllProjects() {
       ];
 
       const milestones = await Promise.all(milestonePromises);
-
-      // Count completed milestones
       const completedCount = milestones.filter(m => m.completed).length;
 
-      // Determine status
       let status: 'active' | 'funded' | 'closed';
       if (project.fullyFunded) {
         status = 'funded';
@@ -95,10 +90,13 @@ export function useAllProjects() {
         status = 'active';
       }
 
-      // Calculate progress percentage
-      const goalEth = Number(formatEther(project.targetAmount));
-      const raisedEth = Number(formatEther(project.currentAmount));
-      const progress = goalEth > 0 ? Math.min((raisedEth / goalEth) * 100, 100) : 0;
+      const goalEth = Number(formatEther(project.targetAmount || 0n));
+      const raisedEth = Number(formatEther(project.currentAmount || 0n));
+      
+      // Ensure all values are valid numbers
+      const safeGoal = isNaN(goalEth) ? 0 : goalEth;
+      const safeRaised = isNaN(raisedEth) ? 0 : raisedEth;
+      const progress = safeGoal > 0 ? Math.min((safeRaised / safeGoal) * 100, 100) : 0;
 
       // Fetch metadata & image
       let imageUrl: string | undefined;
@@ -106,16 +104,11 @@ export function useAllProjects() {
 
       try {
         const rewardURI = await getProjectRewardURI(BigInt(projectId));
-        console.log(`Project ${projectId} rewardURI:`, rewardURI);
-        
         if (rewardURI) {
           const metadata = await fetchMetadataFromIPFS(rewardURI);
           if (metadata) {
             description = metadata.description;
-            if (metadata.image) {
-              imageUrl = ipfsToHttp(metadata.image);
-              console.log(`Project ${projectId} imageUrl:`, imageUrl);
-            }
+            imageUrl = metadata.image ? ipfsToHttp(metadata.image) : undefined;
           }
         }
       } catch (metaErr) {
@@ -124,12 +117,12 @@ export function useAllProjects() {
 
       return {
         id: projectId,
-        creator: project.creator,
-        title: project.title,
+        creator: project.creator || '',
+        title: project.title || 'Untitled Project',
         status,
-        goal: goalEth,
-        raised: raisedEth,
-        progress,
+        goal: safeGoal,
+        raised: safeRaised,
+        progress: progress, // Always valid number
         milestonesCompleted: completedCount,
         totalMilestones: 3,
         imageUrl,

@@ -23,7 +23,29 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
+			<head>
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+							(function() {
+								try {
+									const theme = localStorage.getItem('theme');
+									const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+									
+									if (theme === 'dark' || (!theme && prefersDark)) {
+										document.documentElement.classList.add('dark');
+									} else {
+										document.documentElement.classList.remove('dark');
+									}
+								} catch (e) {
+									console.error('Theme initialization error:', e);
+								}
+							})();
+						`,
+					}}
+				/>
+			</head>
 			<body className={`${geist.className} font-sans antialiased`}>
 				<Web3Provider>{children}</Web3Provider>
 				<Analytics />

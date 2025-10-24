@@ -2,7 +2,7 @@
 
 import { useAccount, useDisconnect, useBalance } from "wagmi";
 import { useConnectModal } from "@xellar/kit";
-import { Wallet, LogOut, Copy, Check, User } from "lucide-react";
+import { Wallet, LogOut, Copy, Check, User, Sun, Moon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 export function WalletButton() {
@@ -13,11 +13,32 @@ export function WalletButton() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Hardcode Sepolia network info
   const networkName = "Sepolia";
   const networkId = "11155111";
+
+  // Check dark mode on mount
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setIsDarkMode(isDark);
+  }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const html = document.documentElement;
+    if (html.classList.contains("dark")) {
+      html.classList.remove("dark");
+      setIsDarkMode(false);
+      localStorage.setItem("theme", "light");
+    } else {
+      html.classList.add("dark");
+      setIsDarkMode(true);
+      localStorage.setItem("theme", "dark");
+    }
+  };
 
   const shortenAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -97,7 +118,9 @@ export function WalletButton() {
             {/* Header with Avatar */}
             <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-lg">
+                <div
+                  className={`w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-lg`}
+                >
                   <User className="w-7 h-7" />
                 </div>
                 <div className="flex-1">
@@ -157,6 +180,42 @@ export function WalletButton() {
                     Chain ID: {networkId}
                   </p>
                 </div>
+              </div>
+
+              {/* Dark Mode Toggle */}
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Theme
+                </p>
+                <button
+                  onClick={toggleDarkMode}
+                  className="w-full flex items-center justify-between bg-gray-50 dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg p-3 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    {isDarkMode ? (
+                      <>
+                        <Moon className="w-4 h-4 text-blue-500" />
+                        <span className="text-sm font-medium">Dark Mode</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sun className="w-4 h-4 text-yellow-500" />
+                        <span className="text-sm font-medium">Light Mode</span>
+                      </>
+                    )}
+                  </div>
+                  <div
+                    className={`w-10 h-6 rounded-full transition-colors ${
+                      isDarkMode ? "bg-blue-600" : "bg-gray-300"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 bg-white rounded-full mt-1 transition-transform ${
+                        isDarkMode ? "ml-5" : "ml-1"
+                      }`}
+                    />
+                  </div>
+                </button>
               </div>
 
               {/* Disconnect Button */}

@@ -1,5 +1,6 @@
 "use client"
 
+import { releaseMilestone } from "@/lib/contracts/factory"
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { TopNav } from "@/components/top-nav"
@@ -17,6 +18,9 @@ import { fetchMetadataFromIPFS, ipfsToHttp } from "@/lib/ipfs"
 import { formatEther, parseEther } from "viem"
 import Image from "next/image"
 import { Loader2, Check, Lock, ThumbsUp, ThumbsDown, Clock, Award, Crown, Star } from "lucide-react"
+import { uploadToIPFS } from "@/lib/ipfs"
+import { proposeMilestoneCompletion } from "@/lib/contracts/factory"
+
 
 interface ProjectData {
 	creator: string
@@ -51,6 +55,9 @@ export default function ProjectDetailPage() {
 	const params = useParams()
 	const router = useRouter()
 	const projectId = Number(params.id)
+
+	const [uploadingProof, setUploadingProof] = useState(false)
+	const [selectedFiles, setSelectedFiles] = useState<Record<number, File | null>>({})
 
 	const [account, setAccount] = useState<string>("")
 	const [loading, setLoading] = useState(true)
@@ -197,6 +204,7 @@ export default function ProjectDetailPage() {
 		}
 	}
 
+	
 	const handleSupport = async (e: React.FormEvent) => {
 		e.preventDefault()
 
@@ -301,6 +309,54 @@ export default function ProjectDetailPage() {
 			setFinalizingMilestone(null)
 		}
 	}
+
+	// Handle upload + propose milestone completion
+	const handleUploadProof = async (milestoneIndex: number) => {
+		if (!account) {
+			alert("Please connect your wallet first")
+			return
+		}
+
+		const file = selectedFiles[milestoneIndex]
+		if (!file) {
+			alert("Please select a file to upload")
+			return
+		}
+
+		try {
+			setUploadingProof(true)
+			// Upload ke IPFS
+			const cid = await uploadToIPFS(file)
+			const proofUri = `ipfs://${cid}`
+
+			// Kirim ke smart contract
+			const hash = await proposeMilestoneCompletion(
+				BigInt(projectId),
+				milestoneIndex,
+				proofUri
+			)
+
+			alert(`Proof uploaded & proposal submitted!\nTransaction: ${hash}`)
+			await fetchProjectDetails()
+		} catch (err: any) {
+			console.error("Error proposing milestone:", err)
+			alert(`Failed to propose milestone: ${err.message || "Unknown error"}`)
+		} finally {
+			setUploadingProof(false)
+		}
+	}
+
+	const handleReleaseMilestone = async (index: number) => {
+	try {
+		const tx = await releaseMilestone(BigInt(projectId), index)
+		alert(`Milestone released! Tx: ${tx}`)
+		await fetchProjectDetails()
+	} catch (err: any) {
+		alert(`Failed: ${err.message}`)
+	}
+	}
+
+
 
 	const getTimeRemaining = (deadline: bigint) => {
 		const now = Math.floor(Date.now() / 1000)
@@ -597,6 +653,43 @@ export default function ProjectDetailPage() {
 													)}
 												</div>
 											</div>
+											
+											{/* Proof Upload (Creator Only) */}
+											{account?.toLowerCase() === project.creator.toLowerCase() &&
+												milestone.released &&
+												!milestone.completed &&
+												milestone.status === 0 && (
+												<div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+													<p className="text-sm font-medium mb-2">Upload progress proof (start milestone voting):</p>
+													<input
+														type="file"
+														onChange={(e) =>
+															setSelectedFiles((prev) => ({
+																...prev,
+																[milestone.index]: e.target.files?.[0] || null,
+															}))
+														}
+														className="text-sm mb-2"
+													/>
+													<button
+														onClick={() => handleUploadProof(milestone.index)}
+														disabled={uploadingProof}
+														className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm"
+													>
+														{uploadingProof ? "Uploading..." : "Submit Proof & Start Voting"}
+													</button>
+												</div>
+											)}
+
+											{account?.toLowerCase() === project.creator.toLowerCase() &&
+												!milestone.released && (
+												<button
+													onClick={() => handleReleaseMilestone(milestone.index)}
+													className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm"
+												>
+													Release Milestone
+												</button>
+											)}
 
 											{/* Voting Section */}
 											{isVoting && (

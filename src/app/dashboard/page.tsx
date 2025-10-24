@@ -133,9 +133,9 @@ export default function DashboardPage() {
 
   if (!account) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950">
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
         <TopNav />
-        <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <div className="flex-1 max-w-4xl mx-auto px-4 py-20 text-center w-full">
           <h1 className="text-4xl font-bold mb-4">Supporter Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-400 mb-8">
             Please connect your wallet to view your dashboard
@@ -148,9 +148,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950">
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
         <TopNav />
-        <div className="flex items-center justify-center py-20">
+        <div className="flex-1 flex items-center justify-center py-20 w-full">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           <span className="ml-3">Loading dashboard...</span>
         </div>
@@ -160,10 +160,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
       <TopNav />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-4xl font-bold mb-2">Supporter Dashboard</h1>

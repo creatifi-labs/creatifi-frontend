@@ -145,10 +145,10 @@ export default function NewProjectPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-white dark:bg-slate-950">
+		<div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
 			<TopNav />
 
-			<div className="container mx-auto px-4 py-8 max-w-2xl">
+			<div className="flex-1 container mx-auto px-4 py-8 max-w-2xl w-full">
 				<div className="flex justify-between items-center mb-8">
 					<div>
 						<h1 className="text-3xl font-bold">Create New Project</h1>

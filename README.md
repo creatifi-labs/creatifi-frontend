@@ -1,36 +1,174 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CreatiFi - Decentralized Creative Funding Platform
+
+## Overview
+
+CreatiFi is a blockchain-based crowdfunding platform that empowers creators through transparent, on-chain funding. Built on Web3 technology, CreatiFi revolutionizes how creative projects are funded by ensuring complete transparency, milestone-based fund releases, and verifiable proof of support through NFT badges.
+
+### Key Features
+
+- **🔒 Smart Contract Escrow**: All funds are secured in smart contracts and released transparently when milestones are verified and completed
+- **🎖️ NFT Proof of Support**: Supporters receive unique NFT badges as permanent proof of their contribution and support
+- **📊 On-Chain Transparency**: All funding flows and project milestones are recorded publicly on-chain, allowing anyone to verify progress and accountability
+- **🎯 Milestone-Based Funding**: Projects are divided into clear milestones with specific funding goals
+- **💎 Tiered Rewards**: Multiple supporter tiers with different benefits and contribution levels
+- **🌐 Web3 Wallet Integration**: Seamless integration with Xellar Embedded Wallet for easy onboarding
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 (App Router)
+- **Styling**: Tailwind CSS with custom design system
+- **Blockchain**: Ethereum (Sepolia Testnet)
+- **Web3 Integration**:
+  - Wagmi v2
+  - Viem v2
+  - Xellar Kit v2.4.3
+- **IPFS Storage**: Pinata for decentralized metadata storage
+- **State Management**: Zustand
+- **Data Fetching**: TanStack React Query
+- **TypeScript**: Full type safety
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- MetaMask or compatible Web3 wallet
+- Sepolia ETH for testing
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd creatifi-frontend
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create `.env.local` file:
+
+```bash
+NEXT_PUBLIC_WC_PROJECT_ID=your_walletconnect_project_id
+NEXT_PUBLIC_XELLAR_APP_ID=your_xellar_app_id
+NEXT_PUBLIC_XELLAR_ENV=sandbox
+```
+
+4. Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Getting Test ETH
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Visit [Sepolia Faucet](https://sepoliafaucet.com/)
+2. Enter your wallet address
+3. Request test ETH
+
+## Features Guide
+
+### For Creators
+
+1. **Launch a Project**:
+
+   - Connect your wallet
+   - Navigate to "Start a Project"
+   - Fill in project details, milestones, and reward tiers
+   - Upload NFT image to Pinata
+   - Deploy project on-chain
+
+2. **Manage Projects**:
+   - Track funding progress
+   - View supporter contributions
+   - Request milestone fund releases
+   - Monitor project analytics
+
+### For Supporters
+
+1. **Discover Projects**:
+
+   - Browse all active projects
+   - Filter by status (Active/Funded)
+   - Search by project name
+
+2. **Support Projects**:
+
+   - Choose a project
+   - Select support tier
+   - Contribute funds
+   - Receive NFT proof of support
+
+3. **Track Contributions**:
+   - View all supported projects
+   - See your total contributions
+   - Access your NFT badges
+   - Monitor project progress
+
+## Smart Contract Integration
+
+The platform interacts with smart contracts for:
+
+- Project creation and management
+- Fund contributions and escrow
+- Milestone-based fund releases
+- NFT badge minting for supporters
+- On-chain verification and transparency
+
+## IPFS & Metadata
+
+Project metadata and NFT images are stored on IPFS via Pinata:
+
+- Decentralized storage ensures permanence
+- Metadata includes project details, tiers, and rewards
+- Images are stored with content addressing (CID)
+- Metadata follows ERC-721 standard for NFTs
+
+## Dark Mode Support
+
+Built-in dark/light mode toggle:
+
+- Accessible via wallet dropdown
+- Persists across sessions
+- Smooth transitions
+- Optimized for both themes
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Wagmi Documentation](https://wagmi.sh/)
+- [Xellar Kit Documentation](https://docs.xellar.co/)
+- [Pinata IPFS Documentation](https://docs.pinata.cloud/)
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The easiest way to deploy CreatiFi is using Vercel:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=<your-repo-url>)
+
+Check out [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License.
+
+## Contact
+
+- Website: [creatifi.com](https://creatifi.com)
+- Twitter: [@creatifi](https://twitter.com/creatifi)
+- Discord: [Join our community](https://discord.gg/creatifi)
+
+---
+
+Built with ❤️ by the CreatiFi team

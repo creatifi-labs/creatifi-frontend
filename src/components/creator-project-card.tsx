@@ -13,7 +13,6 @@ interface CreatorProjectCardProps {
 	totalMilestones: number
 	imageUrl?: string
 	description?: string
-	supporters: number
 }
 
 export function CreatorProjectCard({

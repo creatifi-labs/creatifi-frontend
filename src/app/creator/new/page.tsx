@@ -127,7 +127,7 @@ export default function NewProjectPage() {
 					<div>
 						<h1 className="text-3xl font-bold">Create New Project</h1>
 						<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-							Fill in the details to launch your crowdfunding campaign
+							Fill in the details to launch your creative campaign
 						</p>
 					</div>
 					{account && (

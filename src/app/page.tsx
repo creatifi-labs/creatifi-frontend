@@ -2,7 +2,7 @@ import { TopNav } from "@/components/top-nav"
 import { Footer } from "@/components/footer"
 import { ProjectCard } from "@/components/project-card"
 import { FeatureCard } from "@/components/feature-card"
-import { Lock, Award, Zap, ArrowRight } from "lucide-react"
+import { Lock, Award, Shield, ArrowRight } from "lucide-react"
 
 const trendingProjects = [
   {
@@ -79,8 +79,8 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 gradient-text text-balance">
-              Pendanaan Kreatif yang Transparan & On-Chain
+            <h1 className="text-5xl md:text-6xl font-bold leading-[1.15] md:leading-[1.2] mb-5 inline-block pb-1 gradient-text text-balance overflow-visible">
+              Transparent & On-Chain <br/> Creative Funding
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto text-balance">
               Empowering creators, connecting supporters, powered by Web3 transparency.
@@ -103,7 +103,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-center mb-16">How It Works</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             {[
               {
                 step: "1",
@@ -120,18 +120,24 @@ export default function Home() {
                 title: "Smart Contracts Release Funds",
                 description: "Funds release transparently when milestones are verified and completed.",
               },
-            ].map((item) => (
-              <div key={item.step} className="relative">
-                <div className="card-glow rounded-2xl bg-white dark:bg-slate-800 p-8">
-                  <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center text-white font-bold text-lg mb-4">
+              {
+                step: "4",
+                title: "Supporters Earn Rewards & NFTs",
+                description: "Supporters receive tier-based rewards and unique NFTs as digital proof of their contribution and support.",
+              },
+            ].map((item, index) => (
+              <div 
+                key={item.step} 
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6 h-full">
+                  <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center text-white font-bold text-lg mb-3 shadow-lg">
                     {item.step}
                   </div>
                   <h3 className="font-bold text-lg mb-2">{item.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-400">{item.description}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{item.description}</p>
                 </div>
-                {item.step !== "3" && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-8 gradient-primary rounded-full" />
-                )}
               </div>
             ))}
           </div>
@@ -155,16 +161,16 @@ export default function Home() {
               description="Supporters receive unique NFT badges as proof of their contribution and support."
             />
             <FeatureCard
-              icon={<Zap className="w-6 h-6" />}
-              title="Transparent Royalty System"
-              description="All transactions and fund flows are visible on-chain for complete transparency."
+              icon={<Shield className="w-6 h-6" />}
+              title="On-Chain Project Transparency"
+              description="All funding flows and project milestones are recorded publicly on-chain, allowing anyone to verify progress and ensure accountability."
             />
           </div>
         </div>
       </section>
 
       {/* Trending Projects */}
-      <section className="py-16 md:py-24 bg-gray-50 dark:bg-slate-900">
+      {/* <section className="py-16 md:py-24 bg-gray-50 dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-4xl font-bold">Trending Projects</h2>
@@ -183,7 +189,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       <Footer />
     </div>

@@ -20,7 +20,7 @@ export default function ExplorePage() {
 	})
 
 	return (
-		<div className="min-h-screen bg-white dark:bg-slate-950">
+		<div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
 			<TopNav />
 
 			{/* Header */}
@@ -33,8 +33,8 @@ export default function ExplorePage() {
 				</div>
 			</section>
 
-			{/* Filters */}
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			{/* Filters & Content - flex-1 untuk mengisi space */}
+			<div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 				<div className="flex flex-col md:flex-row gap-4 mb-8">
 					{/* Search */}
 					<div className="flex-1">

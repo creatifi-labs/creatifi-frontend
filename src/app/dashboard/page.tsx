@@ -76,7 +76,7 @@ export default function SupporterDashboard() {
   const totalSupported = supportedProjects.reduce((sum, p) => sum + p.amount, 0)
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
       <TopNav />
 
       {/* Header */}
@@ -87,8 +87,8 @@ export default function SupporterDashboard() {
         </div>
       </section>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Main Content - flex-1 untuk mengisi space */}
+      <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">

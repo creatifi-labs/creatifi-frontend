@@ -40,7 +40,7 @@ export default function CreatorDashboard() {
 	const activeProjectsCount = projects.filter(p => p.status === 'active').length
 
 	return (
-		<div className="min-h-screen bg-white dark:bg-slate-950">
+		<div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
 			<TopNav />
 
 			{/* Header */}
@@ -64,8 +64,8 @@ export default function CreatorDashboard() {
 				</div>
 			</section>
 
-			{/* Main Content */}
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+			{/* Main Content - flex-1 untuk mengisi space */}
+			<div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
 				{/* Analytics Section */}
 				<div className="mb-12">
 					<h2 className="text-2xl font-bold mb-6">Your Analytics</h2>

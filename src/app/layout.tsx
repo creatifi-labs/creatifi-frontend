@@ -12,7 +12,9 @@ export const metadata: Metadata = {
 	title: "CreatiFi - Decentralized Creative Funding",
 	description:
 		"Empowering creators, connecting supporters, powered by Web3 transparency",
-	generator: "v0.app",
+	icons: {
+		icon: "/favicon.ico",
+	},
 };
 
 export default function RootLayout({

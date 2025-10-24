@@ -30,6 +30,30 @@ export interface NFTMetadata {
   image: string;
 }
 
+export async function uploadToIPFS(file: File): Promise<string> {
+  try {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`, // pastikan token ini ada
+      },
+      body: formData,
+    })
+
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || "Upload failed")
+
+    console.log("✅ Uploaded to IPFS:", data)
+    return data.IpfsHash // CID yang dikembalikan oleh Pinata
+  } catch (err) {
+    console.error("❌ Upload to IPFS failed:", err)
+    throw err
+  }
+}
+
 export async function fetchMetadataFromIPFS(ipfsUri: string): Promise<NFTMetadata | null> {
   // Try multiple gateways
   for (let i = 0; i < IPFS_GATEWAYS.length; i++) {

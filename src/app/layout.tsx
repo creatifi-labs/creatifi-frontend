@@ -1,12 +1,18 @@
+import type React from "react";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Roboto_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { Web3Provider } from "@/providers/Web3Provider";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const geist = Inter({ subsets: ["latin"] });
+const geistMono = Roboto_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-	title: "CreatiFi",
-	description: "Decentralized crowdfunding platform",
+	title: "CreatiFi - Decentralized Creative Funding",
+	description:
+		"Empowering creators, connecting supporters, powered by Web3 transparency",
+	generator: "v0.app",
 };
 
 export default function RootLayout({
@@ -16,7 +22,10 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={inter.className}>{children}</body>
+			<body className={`${geist.className} font-sans antialiased`}>
+				<Web3Provider>{children}</Web3Provider>
+				<Analytics />
+			</body>
 		</html>
 	);
 }

@@ -52,7 +52,7 @@ export default function ManageProjectPage() {
 	
 	const [releasingMilestone, setReleasingMilestone] = useState<number | null>(null)
 	const [uploadingProof, setUploadingProof] = useState<number | null>(null)
-	const [selectedFiles, setSelectedFiles] = useState<Record<number, File | null>>({})
+	const [proofLinks, setProofLinks] = useState<Record<number, string>>({})
 
 	useEffect(() => {
 		checkConnection()
@@ -139,28 +139,48 @@ export default function ManageProjectPage() {
 	}
 
 	const handleUploadProof = async (milestoneIndex: number) => {
-		const file = selectedFiles[milestoneIndex]
-		if (!file) {
-			alert("Please select a file to upload")
+		const ipfsLink = proofLinks[milestoneIndex]
+		if (!ipfsLink || !ipfsLink.trim()) {
+			alert("Please enter IPFS link for the proof image")
+			return
+		}
+
+		// Validate IPFS link format
+		if (!ipfsLink.startsWith('ipfs://') && !ipfsLink.includes('ipfs')) {
+			alert("Please enter a valid IPFS link (e.g., ipfs://... or https://gateway.pinata.cloud/ipfs/...)")
 			return
 		}
 
 		try {
 			setUploadingProof(milestoneIndex)
-			const cid = await uploadToIPFS(file)
-			const proofUri = `ipfs://${cid}`
+			
+			// Convert to ipfs:// format if needed
+			let proofUri = ipfsLink
+			if (ipfsLink.includes('gateway.pinata.cloud') || ipfsLink.includes('ipfs.io')) {
+				const cid = ipfsLink.split('/ipfs/')[1]?.split('?')[0]
+				if (cid) {
+					proofUri = `ipfs://${cid}`
+				}
+			}
 
+			// Submit to smart contract
 			const hash = await proposeMilestoneCompletion(
 				BigInt(projectId),
 				milestoneIndex,
 				proofUri
 			)
 
-			alert(`Proof uploaded & voting started!\nTransaction: ${hash}`)
+			alert(`Proof submitted & voting started!\nTransaction: ${hash}`)
 			await fetchProjectDetails()
+			
+			// Clear input after success
+			setProofLinks((prev) => ({
+				...prev,
+				[milestoneIndex]: "",
+			}))
 		} catch (err: any) {
 			console.error("Error proposing milestone:", err)
-			alert(`Failed to propose milestone: ${err.message}`)
+			alert(`Failed to propose milestone: ${err.message || "Unknown error"}`)
 		} finally {
 			setUploadingProof(null)
 		}
@@ -329,7 +349,6 @@ export default function ManageProjectPage() {
 									const votePercentage = milestone.totalVotes > 0n 
 										? Number((milestone.agreeCount * 100n) / milestone.totalVotes)
 										: 0
-									const votingPassed = votePercentage > 50
 									const timeRemaining = isVoting ? getTimeRemaining(milestone.voteDeadline) : null
 
 									// Milestone 1: Can release directly if funded
@@ -343,12 +362,18 @@ export default function ManageProjectPage() {
 										&& milestone.completed 
 										&& milestone.finalized
 
-									// Can propose: previous milestone released + not yet completed
-									const previousMilestone = milestone.index > 0 ? milestones[milestone.index - 1] : null
-									const canPropose = milestone.released 
-										&& !milestone.completed 
-										&& milestone.status === 0
-										&& (milestone.index === 0 || (previousMilestone?.completed || false))
+									// Can propose logic
+									let canPropose = false
+									if (milestone.index === 1) {
+										canPropose = milestones[0].released 
+											&& !milestone.completed 
+											&& milestone.status === 0
+									} else if (milestone.index === 2) {
+										canPropose = milestones[1].released 
+											&& milestones[1].completed 
+											&& !milestone.completed 
+											&& milestone.status === 0
+									}
 
 									return (
 										<div
@@ -454,44 +479,85 @@ export default function ManageProjectPage() {
 												</div>
 											)}
 
-											{/* Upload Proof Section (for Milestone 2 & 3) */}
-											{canPropose && milestone.index > 0 && (
+											{/* Upload Proof Section */}
+											{canPropose && (
 												<div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
 													<p className="text-sm font-medium mb-2">
-														📤 Upload progress proof to start voting for Milestone {milestone.index + 1}:
+														📤 Submit progress proof for Milestone {milestone.index + 1}:
 													</p>
-													<input
-														type="file"
-														onChange={(e) =>
-															setSelectedFiles((prev) => ({
-																...prev,
-																[milestone.index]: e.target.files?.[0] || null,
-															}))
-														}
-														className="text-sm mb-2 w-full"
-													/>
-													{selectedFiles[milestone.index] && (
-														<p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-															Selected: {selectedFiles[milestone.index]?.name}
+													<p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+														Upload your proof image to <strong>Pinata</strong> or IPFS, then paste the link below.
+														This will start a 5-day voting period.
+													</p>
+													{milestone.index === 1 && (
+														<p className="text-xs text-green-600 dark:text-green-400 mb-2">
+															✓ Milestone 1 has been released. You can now propose Milestone 2.
 														</p>
 													)}
+													{milestone.index === 2 && (
+														<p className="text-xs text-green-600 dark:text-green-400 mb-2">
+															✓ Milestone 2 has been completed. You can now propose Milestone 3.
+														</p>
+													)}
+													
+													{/* IPFS Link Input */}
+													<div className="mb-3">
+														<label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
+															IPFS Link (from Pinata or other gateway)
+														</label>
+														<input
+															type="text"
+															value={proofLinks[milestone.index] || ""}
+															onChange={(e) =>
+																setProofLinks((prev) => ({
+																	...prev,
+																	[milestone.index]: e.target.value,
+																}))
+															}
+															placeholder="ipfs://... or https://gateway.pinata.cloud/ipfs/..."
+															className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm"
+														/>
+														<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+															Example: ipfs://QmXxxx... or https://gateway.pinata.cloud/ipfs/QmXxxx...
+														</p>
+													</div>
+
+													{/* Preview if link exists */}
+													{proofLinks[milestone.index] && proofLinks[milestone.index].trim() && (
+														<div className="mb-3">
+															<p className="text-xs font-medium mb-1">Preview:</p>
+															<img
+																src={ipfsToHttp(proofLinks[milestone.index])}
+																alt="Proof preview"
+																className="w-full h-48 object-cover rounded-lg border-2 border-blue-500"
+																onError={(e) => {
+																	(e.target as HTMLImageElement).style.display = 'none'
+																}}
+															/>
+														</div>
+													)}
+													
+													{/* Submit Button */}
 													<button
 														onClick={() => handleUploadProof(milestone.index)}
-														disabled={uploadingProof === milestone.index || !selectedFiles[milestone.index]}
-														className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50"
+														disabled={uploadingProof === milestone.index || !proofLinks[milestone.index]?.trim()}
+														className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
 													>
 														{uploadingProof === milestone.index ? (
 															<>
 																<Loader2 className="w-4 h-4 animate-spin" />
-																Uploading...
+																Submitting...
 															</>
 														) : (
 															<>
 																<Upload className="w-4 h-4" />
-																Submit Proof & Start 5-Day Voting
+																Submit Proof & Start Voting
 															</>
 														)}
 													</button>
+													<div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
+														<strong>💡 Tip:</strong> Upload your image to <a href="https://app.pinata.cloud" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">Pinata</a> first, then copy the IPFS link here.
+													</div>
 												</div>
 											)}
 
@@ -524,14 +590,24 @@ export default function ManageProjectPage() {
 														</span>
 													</div>
 													{milestone.proofURI && (
-														<a
-															href={ipfsToHttp(milestone.proofURI)}
-															target="_blank"
-															rel="noopener noreferrer"
-															className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-block"
-														>
-															📄 View Proof →
-														</a>
+														<div className="mt-3">
+															<p className="text-xs font-medium mb-2">Progress Proof:</p>
+															<a
+																href={ipfsToHttp(milestone.proofURI)}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="block"
+															>
+																<img
+																	src={ipfsToHttp(milestone.proofURI)}
+																	alt="Milestone proof"
+																	className="w-full h-48 object-cover rounded-lg border-2 border-blue-500"
+																/>
+																<span className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block">
+																	View Full Image →
+																</span>
+															</a>
+														</div>
 													)}
 													<div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
 														<strong>ℹ️ Note:</strong> After 5 days, supporters will finalize the vote. 

@@ -95,16 +95,23 @@ export default function DashboardPage() {
               console.error(`Failed to fetch metadata for project ${id}:`, err)
             }
 
+            const goalEth = Number(formatEther(projectData.targetAmount))
+            const raisedEth = Number(formatEther(projectData.currentAmount))
+            
+            // Use fullyFunded from projectData (already calculated in getProject())
+            const status = projectData.fullyFunded ? "funded" : "active"
+
             return {
               id: Number(id),
               title: projectData.title,
-              creator: projectData.creator,
-              targetAmount: projectData.targetAmount,
-              currentAmount: projectData.currentAmount,
-              myContribution: contribution,
-              fullyFunded: projectData.fullyFunded,
-              image: metadata?.image,
-              description: metadata?.description,
+              status,
+              goal: goalEth,
+              raised: raisedEth,
+              milestonesCompleted: 0,
+              totalMilestones: 3,
+              imageUrl: metadata?.image,
+              supporters: 0,
+              myContribution: Number(formatEther(contribution)),
             }
           } catch (err) {
             console.error(`Failed to fetch project ${id}:`, err)
@@ -234,14 +241,12 @@ export default function DashboardPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {supportedProjects.map((project) => {
-                const progress =
-                  Number(formatEther(project.targetAmount)) > 0
-                    ? (Number(formatEther(project.currentAmount)) /
-                        Number(formatEther(project.targetAmount))) *
-                      100
-                    : 0
+                // Hitung progress dengan safe rounding
+                const progress = project.targetAmount > 0 
+                  ? Math.min((Number(formatEther(project.currentAmount)) / Number(formatEther(project.targetAmount))) * 100, 100) 
+                  : 0
 
                 return (
                   <div
@@ -312,7 +317,7 @@ export default function DashboardPage() {
                           <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                             <div
                               className="gradient-primary h-2 rounded-full transition-all"
-                              style={{ width: `${Math.min(progress, 100)}%` }}
+                              style={{ width: `${progress}%` }}
                             />
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

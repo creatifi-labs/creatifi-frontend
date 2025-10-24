@@ -78,6 +78,29 @@ export default function ProjectDetailPage() {
 		}
 	}, [projectId])
 
+	// Separate useEffect to determine user tier whenever contribution or metadata changes
+	useEffect(() => {
+		if (!metadata?.tiers || !Array.isArray(metadata.tiers) || myContribution === 0n) {
+			setUserTier(null)
+			return
+		}
+
+		const contributionEth = Number(formatEther(myContribution))
+		const sortedTiers = [...metadata.tiers].sort(
+			(a: TierData, b: TierData) => parseFloat(b.minContribution) - parseFloat(a.minContribution)
+		)
+		
+		let matchedTier: TierData | null = null
+		for (const tier of sortedTiers) {
+			if (contributionEth >= parseFloat(tier.minContribution)) {
+				matchedTier = tier
+				break
+			}
+		}
+		
+		setUserTier(matchedTier)
+	}, [metadata, myContribution])
+
 	const checkConnection = async () => {
 		if (typeof window !== "undefined" && window.ethereum) {
 			try {
@@ -163,22 +186,11 @@ export default function ProjectDetailPage() {
 					if (supporter) {
 						const { getContribution } = await import('@/lib/contracts/factory')
 						const contribution = await getContribution(BigInt(projectId), account)
+						console.log('User contribution:', formatEther(contribution), 'ETH')
 						setMyContribution(contribution)
-						
-						// Determine user tier based on contribution
-						if (metadata?.tiers && Array.isArray(metadata.tiers)) {
-							const contributionEth = Number(formatEther(contribution))
-							const sortedTiers = [...metadata.tiers].sort(
-								(a: TierData, b: TierData) => parseFloat(b.minContribution) - parseFloat(a.minContribution)
-							)
-							
-							for (const tier of sortedTiers) {
-								if (contributionEth >= parseFloat(tier.minContribution)) {
-									setUserTier(tier)
-									break
-								}
-							}
-						}
+						// Tier will be determined by the useEffect above
+					} else {
+						setMyContribution(0n)
 					}
 				} catch (err) {
 					console.error('Failed to check supporter status:', err)

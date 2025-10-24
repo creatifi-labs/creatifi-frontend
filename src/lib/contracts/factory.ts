@@ -170,35 +170,40 @@ export async function supportProject(projectId: bigint, amount: bigint) {
   }
 }
 
-export async function getProject(projectId: bigint): Promise<Project> {
-  const publicClient = getPublicClient();
+export async function getProject(projectId: bigint) {
+	try {
+		const publicClient = getPublicClient()
+		const result = await publicClient.readContract({
+			address: FACTORY_ADDRESS,
+			abi: factoryABI,
+			functionName: "getProject",
+			args: [projectId],
+		})
 
-  const result = await publicClient.readContract({
-    address: FACTORY_ADDRESS,
-    abi: factoryABI,
-    functionName: 'getProject',
-    args: [projectId],
-  }) as any;
+		// Contract returns: (creator, title, targetAmount, totalRaised, allMilestonesReleased)
+		// We need to convert allMilestonesReleased -> fullyFunded by manual check
+		const [creator, title, targetAmount, currentAmount, allMilestonesReleased] = result as [
+			string,
+			string,
+			bigint,
+			bigint,
+			boolean
+		]
 
-  // Result bisa jadi object atau array, kita handle keduanya
-  if (Array.isArray(result)) {
-    return {
-      creator: result[0],
-      title: result[1],
-      targetAmount: result[2],
-      currentAmount: result[3],
-      fullyFunded: result[4],
-    };
-  } else {
-    // Result sudah dalam bentuk object
-    return {
-      creator: result.creator || result[0],
-      title: result.title || result[1],
-      targetAmount: result.targetAmount || result[2],
-      currentAmount: result.currentAmount || result[3],
-      fullyFunded: result.fullyFunded || result[4],
-    };
-  }
+		// Manual check: fullyFunded = currentAmount >= targetAmount
+		const fullyFunded = currentAmount >= targetAmount
+
+		return {
+			creator,
+			title,
+			targetAmount,
+			currentAmount,
+			fullyFunded, // Use manual calculation instead of contract flag
+		}
+	} catch (error) {
+		console.error("Error getting project:", error)
+		throw error
+	}
 }
 
 export async function getMilestone(projectId: bigint, index: number): Promise<Milestone> {
@@ -311,30 +316,36 @@ export async function getSupportedProjects(userAddress: string): Promise<bigint[
   return result;
 }
 
-export async function isSupporter(projectId: bigint, userAddress: string): Promise<boolean> {
-  const publicClient = getPublicClient();
-  
-  const contribution = await publicClient.readContract({
-    address: FACTORY_ADDRESS,
-    abi: factoryABI,
-    functionName: 'contributions',
-    args: [projectId, userAddress],
-  }) as bigint;
-
-  return contribution > 0n;
+export async function isSupporter(
+	projectId: bigint,
+	address: string
+): Promise<boolean> {
+	try {
+		const contribution = await getContribution(projectId, address)
+		return contribution > 0n
+	} catch (error) {
+		console.error("Error checking supporter:", error)
+		return false
+	}
 }
 
-export async function getContribution(projectId: bigint, userAddress: string): Promise<bigint> {
-  const publicClient = getPublicClient();
-  
-  const contribution = await publicClient.readContract({
-    address: FACTORY_ADDRESS,
-    abi: factoryABI,
-    functionName: 'contributions',
-    args: [projectId, userAddress],
-  }) as bigint;
-
-  return contribution;
+export async function getContribution(
+	projectId: bigint,
+	address: string
+): Promise<bigint> {
+	try {
+		const publicClient = getPublicClient()
+		const contribution = await publicClient.readContract({
+			address: FACTORY_ADDRESS,
+			abi: factoryABI,
+			functionName: "contributions",
+			args: [projectId, address as `0x${string}`],
+		})
+		return contribution as bigint
+	} catch (error) {
+		console.error("Error getting contribution:", error)
+		return 0n
+	}
 }
 
 // Propose milestone completion (creator only)

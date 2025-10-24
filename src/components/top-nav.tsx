@@ -21,6 +21,12 @@ export function TopNav() {
           </Link>
           <div className="flex items-center gap-4 md:gap-6">
             <Link
+              href="../"
+              className="text-sm md:text-base text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
+            >
+              HomePage
+            </Link>
+            <Link
               href="/explore"
               className="text-sm md:text-base text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
             >

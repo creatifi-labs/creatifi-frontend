@@ -91,7 +91,10 @@ export default function Home() {
                 <ArrowRight className="w-4 h-4" />
               </a>
               <button className="px-6 py-3 rounded-lg font-semibold border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 dark:border-accent dark:text-accent dark:hover:bg-accent dark:hover:text-slate-900">
-                Start a Project
+                <a href="/creator" >
+                  Start Projects
+                  <ArrowRight className="w-4 h-4" />
+                </a>
               </button>
             </div>
           </div>

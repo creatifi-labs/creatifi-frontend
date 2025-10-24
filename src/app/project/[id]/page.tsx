@@ -16,7 +16,7 @@ import {
 import { fetchMetadataFromIPFS, ipfsToHttp } from "@/lib/ipfs"
 import { formatEther, parseEther } from "viem"
 import Image from "next/image"
-import { Loader2, Check, Lock, ThumbsUp, ThumbsDown, Clock } from "lucide-react"
+import { Loader2, Check, Lock, ThumbsUp, ThumbsDown, Clock, Award, Crown, Star } from "lucide-react"
 
 interface ProjectData {
 	creator: string
@@ -41,6 +41,12 @@ interface MilestoneData {
 	finalized: boolean
 }
 
+interface TierData {
+	name: string
+	minContribution: string
+	benefits: string
+}
+
 export default function ProjectDetailPage() {
 	const params = useParams()
 	const router = useRouter()
@@ -57,6 +63,8 @@ export default function ProjectDetailPage() {
 	const [project, setProject] = useState<ProjectData | null>(null)
 	const [milestones, setMilestones] = useState<MilestoneData[]>([])
 	const [metadata, setMetadata] = useState<any>(null)
+	const [userTier, setUserTier] = useState<TierData | null>(null)
+	const [myContribution, setMyContribution] = useState<bigint>(0n)
 
 	useEffect(() => {
 		checkConnection()
@@ -141,11 +149,32 @@ export default function ProjectDetailPage() {
 				console.error("Failed to fetch metadata:", metaErr)
 			}
 
-			// Check if current user is supporter
+			// Check if current user is supporter and get contribution
 			if (account) {
 				try {
 					const supporter = await isSupporter(BigInt(projectId), account)
 					setIsUserSupporter(supporter)
+
+					if (supporter) {
+						const { getContribution } = await import('@/lib/contracts/factory')
+						const contribution = await getContribution(BigInt(projectId), account)
+						setMyContribution(contribution)
+						
+						// Determine user tier based on contribution
+						if (metadata?.tiers && Array.isArray(metadata.tiers)) {
+							const contributionEth = Number(formatEther(contribution))
+							const sortedTiers = [...metadata.tiers].sort(
+								(a: TierData, b: TierData) => parseFloat(b.minContribution) - parseFloat(a.minContribution)
+							)
+							
+							for (const tier of sortedTiers) {
+								if (contributionEth >= parseFloat(tier.minContribution)) {
+									setUserTier(tier)
+									break
+								}
+							}
+						}
+					}
 				} catch (err) {
 					console.error('Failed to check supporter status:', err)
 				}
@@ -294,6 +323,30 @@ export default function ProjectDetailPage() {
 		return { text, expired: false, seconds: remaining }
 	}
 
+	const getTierIcon = (tierName: string) => {
+		const lowerName = tierName.toLowerCase()
+		if (lowerName.includes('gold') || lowerName.includes('premium')) {
+			return <Crown className="w-4 h-4 text-yellow-500" />
+		} else if (lowerName.includes('silver')) {
+			return <Star className="w-4 h-4 text-gray-400" />
+		} else if (lowerName.includes('bronze')) {
+			return <Award className="w-4 h-4 text-orange-600" />
+		}
+		return <Award className="w-4 h-4" />
+	}
+
+	const getTierColor = (tierName: string) => {
+		const lowerName = tierName.toLowerCase()
+		if (lowerName.includes('gold') || lowerName.includes('premium')) {
+			return 'from-yellow-400 to-yellow-600'
+		} else if (lowerName.includes('silver')) {
+			return 'from-gray-300 to-gray-500'
+		} else if (lowerName.includes('bronze')) {
+			return 'from-orange-400 to-orange-600'
+		}
+		return 'from-blue-400 to-blue-600'
+	}
+
 	// Auto-refresh countdown every second for active votings
 	useEffect(() => {
 		if (!milestones.length) return
@@ -359,6 +412,30 @@ export default function ProjectDetailPage() {
 					← Back
 				</button>
 
+				{/* Your Tier Badge - Show at top if user is supporter */}
+				{userTier && (
+					<div className="mb-6 card-glow rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 p-6 text-white">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-4">
+								<div className={`p-3 bg-white/20 backdrop-blur-sm rounded-xl`}>
+									{getTierIcon(userTier.name)}
+								</div>
+								<div>
+									<p className="text-sm opacity-90 mb-1">🎉 Your Supporter Tier</p>
+									<h3 className="text-2xl font-bold">{userTier.name}</h3>
+									{userTier.benefits && (
+										<p className="text-sm opacity-90 mt-1">{userTier.benefits}</p>
+									)}
+								</div>
+							</div>
+							<div className="text-right">
+								<p className="text-sm opacity-90 mb-1">Your Total Contribution</p>
+								<p className="text-3xl font-bold">{Number(formatEther(myContribution)).toFixed(4)} ETH</p>
+							</div>
+						</div>
+					</div>
+				)}
+
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 					{/* Left Column - Project Info */}
 					<div className="lg:col-span-2 space-y-6">
@@ -402,6 +479,62 @@ export default function ProjectDetailPage() {
 								</div>
 							</div>
 						</div>
+
+						{/* Supporter Tiers Section */}
+						{metadata?.tiers && Array.isArray(metadata.tiers) && metadata.tiers.length > 0 && (
+							<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
+								<h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+									<Award className="w-6 h-6" />
+									Supporter Tiers
+								</h2>
+								
+								{/* All Tiers */}
+								<div className="space-y-3">
+									{metadata.tiers
+										.sort((a: TierData, b: TierData) => 
+											parseFloat(a.minContribution) - parseFloat(b.minContribution)
+										)
+										.map((tier: TierData, index: number) => {
+											const isUserCurrentTier = userTier?.name === tier.name
+											
+											return (
+												<div
+													key={index}
+													className={`p-4 rounded-lg border-2 transition-all ${
+														isUserCurrentTier
+															? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+															: 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700'
+													}`}
+												>
+													<div className="flex items-center gap-3 mb-2">
+														<div className={`p-2 bg-gradient-to-br ${getTierColor(tier.name)} rounded-lg`}>
+															{getTierIcon(tier.name)}
+														</div>
+														<div className="flex-1">
+															<div className="flex items-center gap-2">
+																<h3 className="font-semibold">{tier.name}</h3>
+																{isUserCurrentTier && (
+																	<span className="text-xs px-2 py-0.5 bg-purple-500 text-white rounded-full">
+																		YOUR TIER
+																	</span>
+																)}
+															</div>
+															<p className="text-sm text-gray-600 dark:text-gray-400">
+																Min. {tier.minContribution} ETH
+															</p>
+														</div>
+													</div>
+													{tier.benefits && (
+														<p className="text-sm text-gray-700 dark:text-gray-300 ml-11">
+															{tier.benefits}
+														</p>
+													)}
+												</div>
+											)
+										})}
+								</div>
+							</div>
+						)}
 
 						{/* Milestones */}
 						<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
@@ -659,7 +792,7 @@ export default function ProjectDetailPage() {
 									{supportAmount && parseFloat(supportAmount) > 0 && (
 										<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
 											<p className="text-gray-700 dark:text-gray-300 mb-1">
-												<strong>Contribution to project:</strong> {supportAmount} ETH
+												<strong>Contribution to project:</strong> {parseFloat(supportAmount).toFixed(6)} ETH
 											</p>
 											<p className="text-gray-700 dark:text-gray-300 mb-1">
 												<strong>Platform fee (2.5%):</strong>{" "}
@@ -669,6 +802,43 @@ export default function ProjectDetailPage() {
 												<strong>Total to pay:</strong>{" "}
 												{(parseFloat(supportAmount) * (1025 / 1000)).toFixed(6)} ETH
 											</p>
+										</div>
+									)}
+
+									{/* Tier Preview in Support Form */}
+									{supportAmount && parseFloat(supportAmount) > 0 && metadata?.tiers && Array.isArray(metadata.tiers) && metadata.tiers.length > 0 && (
+										<div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+											<p className="text-xs font-medium mb-2">🎁 You'll receive:</p>
+											{(() => {
+												const amount = parseFloat(supportAmount)
+												const sortedTiers = [...metadata.tiers].sort(
+													(a: TierData, b: TierData) => parseFloat(b.minContribution) - parseFloat(a.minContribution)
+												)
+												const matchedTier = sortedTiers.find((t: TierData) => amount >= parseFloat(t.minContribution))
+												
+												if (matchedTier) {
+													return (
+														<div className="flex items-center gap-2">
+															<div className={`p-1.5 bg-gradient-to-br ${getTierColor(matchedTier.name)} rounded`}>
+																{getTierIcon(matchedTier.name)}
+															</div>
+															<div>
+																<p className="text-sm font-semibold">{matchedTier.name}</p>
+																{matchedTier.benefits && (
+																	<p className="text-xs text-gray-600 dark:text-gray-400">
+																		{matchedTier.benefits}
+																	</p>
+																)}
+															</div>
+														</div>
+													)
+												}
+												return (
+													<p className="text-xs text-gray-600 dark:text-gray-400">
+														Supporter status (increase amount for tier rewards)
+													</p>
+												)
+											})()}
 										</div>
 									)}
 

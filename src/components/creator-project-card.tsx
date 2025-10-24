@@ -2,7 +2,6 @@
 
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
 
 interface CreatorProjectCardProps {
 	id: number
@@ -14,6 +13,7 @@ interface CreatorProjectCardProps {
 	totalMilestones: number
 	imageUrl?: string
 	description?: string
+	supporters: number
 }
 
 export function CreatorProjectCard({
@@ -28,7 +28,7 @@ export function CreatorProjectCard({
 	description,
 }: CreatorProjectCardProps) {
 	const router = useRouter()
-	const [imageError, setImageError] = useState(false)
+	const progress = goal > 0 ? (raised / goal) * 100 : 0
 
 	const percentage = (raised / goal) * 100
 	const statusConfig: Record<string, { label: string; className: string }> = {
@@ -51,25 +51,20 @@ export function CreatorProjectCard({
 
 	const currentStatus = statusConfig[status] || statusConfig.active
 
-	const handleManageProject = () => {
-		router.push(`/creator/manage/${id}`)
-	}
-
 	return (
-		<div className="card-glow rounded-xl bg-white dark:bg-slate-800 overflow-hidden">
+		<div
+			className="card-glow rounded-xl bg-white dark:bg-slate-800 overflow-hidden hover:scale-105 transition-transform cursor-pointer"
+			onClick={() => router.push(`/project/${id}`)}
+		>
 			{/* Project Image */}
 			<div className="relative h-40 bg-gradient-to-br from-blue-500 to-purple-500">
-				{imageUrl && !imageError ? (
+				{imageUrl ? (
 					<Image
 						src={imageUrl}
 						alt={title}
 						fill
 						className="object-cover"
 						unoptimized
-						onError={() => {
-							console.error('Failed to load image:', imageUrl)
-							setImageError(true)
-						}}
 					/>
 				) : (
 					<div className="absolute inset-0 flex items-center justify-center text-white text-3xl font-bold opacity-20">
@@ -116,7 +111,7 @@ export function CreatorProjectCard({
 				</div>
 
 				{/* Milestones */}
-				<div className="mb-4">
+				<div>
 					<div className="flex justify-between text-sm mb-2">
 						<span className="text-gray-600 dark:text-gray-400">
 							Milestones
@@ -138,14 +133,6 @@ export function CreatorProjectCard({
 						))}
 					</div>
 				</div>
-
-				{/* Action Button */}
-				<button 
-					onClick={handleManageProject}
-					className="w-full btn-secondary"
-				>
-					Manage Project
-				</button>
 			</div>
 		</div>
 	)

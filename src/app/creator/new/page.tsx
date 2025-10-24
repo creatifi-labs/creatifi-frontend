@@ -25,6 +25,15 @@ export default function NewProjectPage() {
 		milestone2Amount: "",
 		milestone3Name: "",
 		milestone3Amount: "",
+		tier1Name: "",
+		tier1MinContribution: "",
+		tier1Benefits: "",
+		tier2Name: "",
+		tier2MinContribution: "",
+		tier2Benefits: "",
+		tier3Name: "",
+		tier3MinContribution: "",
+		tier3Benefits: "",
 	})
 
 	useEffect(() => {
@@ -68,6 +77,23 @@ export default function NewProjectPage() {
 				name: formData.title,
 				description: formData.description,
 				image: formatIPFSUri(formData.imageCID.trim()),
+				tiers: [
+					{
+						name: formData.tier1Name,
+						minContribution: formData.tier1MinContribution,
+						benefits: formData.tier1Benefits,
+					},
+					{
+						name: formData.tier2Name,
+						minContribution: formData.tier2MinContribution,
+						benefits: formData.tier2Benefits,
+					},
+					{
+						name: formData.tier3Name,
+						minContribution: formData.tier3MinContribution,
+						benefits: formData.tier3Benefits,
+					},
+				],
 			}
 
 			const metadataCID = await uploadMetadataToPinata(metadata)
@@ -298,6 +324,75 @@ export default function NewProjectPage() {
 								</div>
 							</div>
 						))}
+					</div>
+
+					{/* Tiers Section */}
+					<div className="border-t pt-6 dark:border-slate-700">
+						<h2 className="text-xl font-semibold mb-4">Supporter Tiers</h2>
+
+						<div className="space-y-4">
+							{[1, 2, 3].map((num) => (
+								<div
+									key={num}
+									className="mb-6 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg"
+								>
+									<h3 className="font-medium mb-3">Tier {num}</h3>
+									<div className="space-y-3">
+										<div>
+											<label className="block text-sm font-medium mb-1">
+												Tier Name <span className="text-red-500">*</span>
+											</label>
+											<input
+												type="text"
+												name={`tier${num}Name`}
+												value={
+													formData[`tier${num}Name` as keyof typeof formData]
+												}
+												onChange={handleChange}
+												required
+												className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
+												placeholder={`e.g., Bronze Supporter`}
+											/>
+										</div>
+										<div>
+											<label className="block text-sm font-medium mb-1">
+												Min. Contribution (ETH){" "}
+												<span className="text-red-500">*</span>
+											</label>
+											<input
+												type="number"
+												step="0.01"
+												name={`tier${num}MinContribution`}
+												value={
+													formData[
+														`tier${num}MinContribution` as keyof typeof formData
+													]
+												}
+												onChange={handleChange}
+												required
+												className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
+												placeholder="0.00"
+											/>
+										</div>
+										<div>
+											<label className="block text-sm font-medium mb-1">
+												Benefits
+											</label>
+											<textarea
+												name={`tier${num}Benefits`}
+												value={
+													formData[`tier${num}Benefits` as keyof typeof formData]
+												}
+												onChange={handleChange}
+												rows={2}
+												className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
+												placeholder="e.g., Supporter badge, Early access to updates"
+											/>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
 					</div>
 
 					<button

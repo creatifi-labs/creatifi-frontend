@@ -651,7 +651,7 @@ export default function ProjectDetailPage() {
 											disabled={supporting}
 										/>
 										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-											Amount that will go to the project (excluding platform fee)
+											Amount that will go to the project (excluding platform fee and network gas fee)
 										</p>
 									</div>
 

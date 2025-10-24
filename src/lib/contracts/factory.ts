@@ -298,17 +298,43 @@ export async function releaseMilestone(projectId: bigint, milestoneIndex: number
   return hash;
 }
 
-export async function getContribution(projectId: bigint, supporter: string): Promise<bigint> {
+export async function getSupportedProjects(userAddress: string): Promise<bigint[]> {
   const publicClient = getPublicClient();
-
+  
   const result = await publicClient.readContract({
     address: FACTORY_ADDRESS,
     abi: factoryABI,
-    functionName: 'contributions',
-    args: [projectId, supporter],
-  }) as bigint;
+    functionName: 'getSupportedProjects',
+    args: [userAddress],
+  }) as bigint[];
 
   return result;
+}
+
+export async function isSupporter(projectId: bigint, userAddress: string): Promise<boolean> {
+  const publicClient = getPublicClient();
+  
+  const contribution = await publicClient.readContract({
+    address: FACTORY_ADDRESS,
+    abi: factoryABI,
+    functionName: 'contributions',
+    args: [projectId, userAddress],
+  }) as bigint;
+
+  return contribution > 0n;
+}
+
+export async function getContribution(projectId: bigint, userAddress: string): Promise<bigint> {
+  const publicClient = getPublicClient();
+  
+  const contribution = await publicClient.readContract({
+    address: FACTORY_ADDRESS,
+    abi: factoryABI,
+    functionName: 'contributions',
+    args: [projectId, userAddress],
+  }) as bigint;
+
+  return contribution;
 }
 
 // Propose milestone completion (creator only)
@@ -374,10 +400,4 @@ export async function finalizeMilestoneVote(
   });
 
   return hash;
-}
-
-// Check if user is a supporter
-export async function isSupporter(projectId: bigint, userAddress: string): Promise<boolean> {
-  const contribution = await getContribution(projectId, userAddress);
-  return contribution > 0n;
 }

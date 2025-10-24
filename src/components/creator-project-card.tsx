@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 interface CreatorProjectCardProps {
@@ -26,6 +27,7 @@ export function CreatorProjectCard({
 	imageUrl,
 	description,
 }: CreatorProjectCardProps) {
+	const router = useRouter()
 	const [imageError, setImageError] = useState(false)
 
 	const percentage = (raised / goal) * 100
@@ -48,6 +50,10 @@ export function CreatorProjectCard({
 	}
 
 	const currentStatus = statusConfig[status] || statusConfig.active
+
+	const handleManageProject = () => {
+		router.push(`/creator/manage/${id}`)
+	}
 
 	return (
 		<div className="card-glow rounded-xl bg-white dark:bg-slate-800 overflow-hidden">
@@ -110,7 +116,7 @@ export function CreatorProjectCard({
 				</div>
 
 				{/* Milestones */}
-				<div>
+				<div className="mb-4">
 					<div className="flex justify-between text-sm mb-2">
 						<span className="text-gray-600 dark:text-gray-400">
 							Milestones
@@ -132,6 +138,14 @@ export function CreatorProjectCard({
 						))}
 					</div>
 				</div>
+
+				{/* Action Button */}
+				<button 
+					onClick={handleManageProject}
+					className="w-full btn-secondary"
+				>
+					Manage Project
+				</button>
 			</div>
 		</div>
 	)

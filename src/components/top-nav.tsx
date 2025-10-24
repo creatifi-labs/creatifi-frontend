@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { WalletButton } from "./wallet-button"
 
 export function TopNav() {
@@ -8,8 +9,15 @@ export function TopNav() {
     <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-slate-900/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="font-bold text-xl gradient-text">
-            CreatiFi
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/creatifilogo.png"
+              alt="CreatiFi Logo"
+              width={32}
+              height={32}
+              className="w-8 h-8"
+            />
+            <span className="font-bold text-xl gradient-text">CreatiFi</span>
           </Link>
           <div className="flex items-center gap-4 md:gap-6">
             <Link

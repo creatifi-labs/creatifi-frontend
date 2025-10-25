@@ -95,23 +95,16 @@ export default function DashboardPage() {
               console.error(`Failed to fetch metadata for project ${id}:`, err)
             }
 
-            const goalEth = Number(formatEther(projectData.targetAmount))
-            const raisedEth = Number(formatEther(projectData.currentAmount))
-            
-            // Use fullyFunded from projectData (already calculated in getProject())
-            const status = projectData.fullyFunded ? "funded" : "active"
-
             return {
               id: Number(id),
               title: projectData.title,
-              status,
-              goal: goalEth,
-              raised: raisedEth,
-              milestonesCompleted: 0,
-              totalMilestones: 3,
-              imageUrl: metadata?.image,
-              supporters: 0,
-              myContribution: Number(formatEther(contribution)),
+              creator: projectData.creator,
+              targetAmount: projectData.targetAmount,
+              currentAmount: projectData.currentAmount,
+              myContribution: contribution,
+              fullyFunded: projectData.fullyFunded,
+              image: metadata?.image,
+              description: metadata?.description,
             }
           } catch (err) {
             console.error(`Failed to fetch project ${id}:`, err)

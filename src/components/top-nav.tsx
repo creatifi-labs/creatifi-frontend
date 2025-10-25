@@ -36,13 +36,13 @@ export function TopNav() {
               href="/creator"
               className="text-sm md:text-base text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
             >
-              Create Project
+              Creator Space
             </Link>
             <Link
               href="/dashboard"
               className="text-sm md:text-base text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
             >
-              My Support
+              Supporter Space
             </Link>
             <WalletButton />
           </div>

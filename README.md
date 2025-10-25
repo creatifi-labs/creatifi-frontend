@@ -157,7 +157,7 @@ This project is licensed under the MIT License.
 
 ## Contact
 
-- Website: [creatifi.com](https://creatifi.vercel.app)
+- Website: [creatifi.vercel.app](https://creatifi.vercel.app)
 - Instagram: [@creatifi](https://instagram.com/creatifi)
 ---
 

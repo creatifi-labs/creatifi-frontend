@@ -53,7 +53,7 @@ export function CreatorProjectCard({
 	return (
 		<div
 			className="card-glow rounded-xl bg-white dark:bg-slate-800 overflow-hidden hover:scale-105 transition-transform cursor-pointer"
-			onClick={() => router.push(`/project/${id}`)}
+			onClick={() => router.push(`/manage/${id}`)}
 		>
 			{/* Project Image */}
 			<div className="relative h-40 bg-gradient-to-br from-blue-500 to-purple-500">

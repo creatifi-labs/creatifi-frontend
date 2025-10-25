@@ -1,6 +1,5 @@
 "use client"
 
-import { releaseMilestone } from "@/lib/contracts/factory"
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { TopNav } from "@/components/top-nav"
@@ -12,14 +11,13 @@ import {
   supportProject,
   voteMilestoneCompletion,
   finalizeMilestoneVote,
-  isSupporter
+  isSupporter,
+  proposeMilestoneCompletion
 } from "@/lib/contracts/factory"
-import { fetchMetadataFromIPFS, ipfsToHttp } from "@/lib/ipfs"
+import { fetchMetadataFromIPFS, uploadToIPFS, ipfsToHttp } from "@/lib/ipfs"
 import { formatEther, parseEther } from "viem"
 import Image from "next/image"
 import { Loader2, Check, Lock, ThumbsUp, ThumbsDown, Clock, Award, Crown, Star } from "lucide-react"
-import { uploadToIPFS } from "@/lib/ipfs"
-import { proposeMilestoneCompletion } from "@/lib/contracts/factory"
 
 
 interface ProjectData {
@@ -79,6 +77,29 @@ export default function ProjectDetailPage() {
 			fetchProjectDetails()
 		}
 	}, [projectId])
+
+	// Separate useEffect to determine user tier whenever contribution or metadata changes
+	useEffect(() => {
+		if (!metadata?.tiers || !Array.isArray(metadata.tiers) || myContribution === 0n) {
+			setUserTier(null)
+			return
+		}
+
+		const contributionEth = Number(formatEther(myContribution))
+		const sortedTiers = [...metadata.tiers].sort(
+			(a: TierData, b: TierData) => parseFloat(b.minContribution) - parseFloat(a.minContribution)
+		)
+		
+		let matchedTier: TierData | null = null
+		for (const tier of sortedTiers) {
+			if (contributionEth >= parseFloat(tier.minContribution)) {
+				matchedTier = tier
+				break
+			}
+		}
+		
+		setUserTier(matchedTier)
+	}, [metadata, myContribution])
 
 	const checkConnection = async () => {
 		if (typeof window !== "undefined" && window.ethereum) {
@@ -165,22 +186,11 @@ export default function ProjectDetailPage() {
 					if (supporter) {
 						const { getContribution } = await import('@/lib/contracts/factory')
 						const contribution = await getContribution(BigInt(projectId), account)
+						console.log('User contribution:', formatEther(contribution), 'ETH')
 						setMyContribution(contribution)
-						
-						// Determine user tier based on contribution
-						if (metadata?.tiers && Array.isArray(metadata.tiers)) {
-							const contributionEth = Number(formatEther(contribution))
-							const sortedTiers = [...metadata.tiers].sort(
-								(a: TierData, b: TierData) => parseFloat(b.minContribution) - parseFloat(a.minContribution)
-							)
-							
-							for (const tier of sortedTiers) {
-								if (contributionEth >= parseFloat(tier.minContribution)) {
-									setUserTier(tier)
-									break
-								}
-							}
-						}
+						// Tier will be determined by the useEffect above
+					} else {
+						setMyContribution(0n)
 					}
 				} catch (err) {
 					console.error('Failed to check supporter status:', err)
@@ -346,17 +356,7 @@ export default function ProjectDetailPage() {
 		}
 	}
 
-	const handleReleaseMilestone = async (index: number) => {
-	try {
-		const tx = await releaseMilestone(BigInt(projectId), index)
-		alert(`Milestone released! Tx: ${tx}`)
-		await fetchProjectDetails()
-	} catch (err: any) {
-		alert(`Failed: ${err.message}`)
-	}
-	}
-
-
+	// Handle release milestone (removed as per changes)
 
 	const getTimeRemaining = (deadline: bigint) => {
 		const now = Math.floor(Date.now() / 1000)
@@ -679,16 +679,6 @@ export default function ProjectDetailPage() {
 														{uploadingProof ? "Uploading..." : "Submit Proof & Start Voting"}
 													</button>
 												</div>
-											)}
-
-											{account?.toLowerCase() === project.creator.toLowerCase() &&
-												!milestone.released && (
-												<button
-													onClick={() => handleReleaseMilestone(milestone.index)}
-													className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm"
-												>
-													Release Milestone
-												</button>
 											)}
 
 											{/* Voting Section */}

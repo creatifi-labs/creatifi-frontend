@@ -147,14 +147,6 @@ Built-in dark/light mode toggle:
 - [Xellar Kit Documentation](https://docs.xellar.co/)
 - [Pinata IPFS Documentation](https://docs.pinata.cloud/)
 
-## Deploy on Vercel
-
-The easiest way to deploy CreatiFi is using Vercel:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=<your-repo-url>)
-
-Check out [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -165,10 +157,8 @@ This project is licensed under the MIT License.
 
 ## Contact
 
-- Website: [creatifi.com](https://creatifi.com)
-- Twitter: [@creatifi](https://twitter.com/creatifi)
-- Discord: [Join our community](https://discord.gg/creatifi)
-
+- Website: [creatifi.com](https://creatifi.vercel.app)
+- Twitter: [@creatifi](https://instagram.com/creatifi)
 ---
 
 Built with ❤️ by the CreatiFi team

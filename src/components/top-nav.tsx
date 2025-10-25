@@ -24,7 +24,7 @@ export function TopNav() {
               href="../"
               className="text-sm md:text-base text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
             >
-              HomePage
+              Home
             </Link>
             <Link
               href="/explore"
@@ -36,13 +36,13 @@ export function TopNav() {
               href="/creator"
               className="text-sm md:text-base text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
             >
-              Create
+              Create Project
             </Link>
             <Link
               href="/dashboard"
               className="text-sm md:text-base text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
             >
-              Dashboard
+              My Support
             </Link>
             <WalletButton />
           </div>

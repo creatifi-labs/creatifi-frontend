@@ -1,5 +1,6 @@
 "use client"
 
+import toast from "react-hot-toast"
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { TopNav } from "@/components/top-nav"
@@ -139,52 +140,47 @@ export default function ManageProjectPage() {
 	}
 
 	const handleUploadProof = async (milestoneIndex: number) => {
-		const ipfsLink = proofLinks[milestoneIndex]
-		if (!ipfsLink || !ipfsLink.trim()) {
-			alert("Please enter IPFS link for the proof image")
+		const cid = proofLinks[milestoneIndex]?.trim()
+
+		if (!cid) {
+			toast.error("Please enter the CID for your proof")
 			return
 		}
 
-		// Validate IPFS link format
-		if (!ipfsLink.startsWith('ipfs://') && !ipfsLink.includes('ipfs')) {
-			alert("Please enter a valid IPFS link (e.g., ipfs://... or https://gateway.pinata.cloud/ipfs/...)")
+		// Validasi sederhana: pastikan cuma karakter base58 / base32 umum CID
+		if (!/^[A-Za-z0-9]+$/.test(cid)) {
+			toast.error("Invalid CID format. Example: QmXxxx... or bafybeihxxx")
 			return
 		}
 
 		try {
 			setUploadingProof(milestoneIndex)
-			
-			// Convert to ipfs:// format if needed
-			let proofUri = ipfsLink
-			if (ipfsLink.includes('gateway.pinata.cloud') || ipfsLink.includes('ipfs.io')) {
-				const cid = ipfsLink.split('/ipfs/')[1]?.split('?')[0]
-				if (cid) {
-					proofUri = `ipfs://${cid}`
-				}
-			}
 
-			// Submit to smart contract
+			// Langsung ubah ke format ipfs://<cid>
+			const proofUri = `ipfs://${cid}`
+
 			const hash = await proposeMilestoneCompletion(
 				BigInt(projectId),
 				milestoneIndex,
 				proofUri
 			)
 
-			alert(`Proof submitted & voting started!\nTransaction: ${hash}`)
+			toast.success(`📤 Proof submitted successfully! Transaction: ${hash}`)
 			await fetchProjectDetails()
-			
-			// Clear input after success
+
+			// Bersihkan input setelah sukses
 			setProofLinks((prev) => ({
 				...prev,
 				[milestoneIndex]: "",
 			}))
 		} catch (err: any) {
 			console.error("Error proposing milestone:", err)
-			alert(`Failed to propose milestone: ${err.message || "Unknown error"}`)
+			toast.error(`❌ Failed to propose milestone: ${err.message || "Unknown error"}`)
 		} finally {
 			setUploadingProof(null)
 		}
 	}
+
 
 	const getTimeRemaining = (deadline: bigint) => {
 		const now = Math.floor(Date.now() / 1000)
@@ -503,8 +499,9 @@ export default function ManageProjectPage() {
 													{/* IPFS Link Input */}
 													<div className="mb-3">
 														<label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
-															IPFS Link (from Pinata or other gateway)
+															IPFS CID (not full link)
 														</label>
+
 														<input
 															type="text"
 															value={proofLinks[milestone.index] || ""}
@@ -514,7 +511,7 @@ export default function ManageProjectPage() {
 																	[milestone.index]: e.target.value,
 																}))
 															}
-															placeholder="ipfs://... or https://gateway.pinata.cloud/ipfs/..."
+															placeholder="QmXxxx... or bafybeihxxx"
 															className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm"
 														/>
 														<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -527,13 +524,14 @@ export default function ManageProjectPage() {
 														<div className="mb-3">
 															<p className="text-xs font-medium mb-1">Preview:</p>
 															<img
-																src={ipfsToHttp(proofLinks[milestone.index])}
+																src={`https://gateway.pinata.cloud/ipfs/${proofLinks[milestone.index]}`}
 																alt="Proof preview"
 																className="w-full h-48 object-cover rounded-lg border-2 border-blue-500"
 																onError={(e) => {
 																	(e.target as HTMLImageElement).style.display = 'none'
 																}}
 															/>
+
 														</div>
 													)}
 													

@@ -12,12 +12,12 @@ import {
   voteMilestoneCompletion,
   finalizeMilestoneVote,
   isSupporter,
-  proposeMilestoneCompletion
 } from "@/lib/contracts/factory"
-import { fetchMetadataFromIPFS, uploadToIPFS, ipfsToHttp } from "@/lib/ipfs"
+import { fetchMetadataFromIPFS, ipfsToHttp } from "@/lib/ipfs"
 import { formatEther, parseEther } from "viem"
 import Image from "next/image"
 import { Loader2, Check, Lock, ThumbsUp, ThumbsDown, Clock, Award, Crown, Star } from "lucide-react"
+import toast from "react-hot-toast"
 
 
 interface ProjectData {
@@ -53,9 +53,6 @@ export default function ProjectDetailPage() {
 	const params = useParams()
 	const router = useRouter()
 	const projectId = Number(params.id)
-
-	const [uploadingProof, setUploadingProof] = useState(false)
-	const [selectedFiles, setSelectedFiles] = useState<Record<number, File | null>>({})
 
 	const [account, setAccount] = useState<string>("")
 	const [loading, setLoading] = useState(true)
@@ -204,7 +201,7 @@ export default function ProjectDetailPage() {
 			console.error("Error message:", (error as Error).message)
 			console.error("Error stack:", (error as Error).stack)
 			
-			alert("Failed to load project details: " + (error as Error).message)
+			toast.error("❌ Failed to load project details: " + (error as Error).message)
 			
 			setProject(null)
 			setMilestones([])
@@ -219,7 +216,7 @@ export default function ProjectDetailPage() {
 		e.preventDefault()
 
 		if (!account) {
-			alert("Please connect your wallet first")
+			toast.error(`❌ Failed to finalize:`)
 			return
 		}
 
@@ -252,20 +249,17 @@ export default function ProjectDetailPage() {
 				parseEther(totalToPay.toString())
 			)
 
-			alert(
-				`Support successful!\n` +
-				`Net contribution: ${netAmount} ETH\n` +
-				`Platform fee: ${fee.toFixed(6)} ETH\n` +
-				`Total paid: ${totalToPay.toFixed(6)} ETH\n` +
-				`Transaction: ${hash}`
+			toast.success(
+			`🎉 Support successful!\nNet: ${netAmount} ETH\nFee: ${fee.toFixed(6)} ETH\nTotal: ${totalToPay.toFixed(6)} ETH\nTxn: ${hash}`
 			)
+
 
 			// Refresh project data
 			await fetchProjectDetails()
 			setSupportAmount("")
 		} catch (error: any) {
 			console.error("Error supporting project:", error)
-			alert(`Failed to support project: ${error.message || "Unknown error"}`)
+			toast.error(`❌ Failed to support project: ${error.message || "Unknown error"}`)
 		} finally {
 			setSupporting(false)
 		}
@@ -291,11 +285,11 @@ export default function ProjectDetailPage() {
 				agree
 			)
 
-			alert(`Vote submitted!\nTransaction: ${hash}`)
+			toast.success(`🗳️ Vote submitted!\nTxn: ${hash}`)
 			await fetchProjectDetails()
 		} catch (error: any) {
 			console.error('Error voting:', error)
-			alert(`Failed to vote: ${error.message || "Unknown error"}`)
+			toast.error(`❌ Failed to vote: ${error.message || "Unknown error"}`)
 		} finally {
 			setVotingOnMilestone(null)
 		}
@@ -310,49 +304,13 @@ export default function ProjectDetailPage() {
 				milestoneIndex
 			)
 
-			alert(`Voting finalized!\nTransaction: ${hash}`)
+			toast.success(`✅ Voting finalized!\nTxn: ${hash}`)
 			await fetchProjectDetails()
 		} catch (error: any) {
 			console.error('Error finalizing:', error)
-			alert(`Failed to finalize: ${error.message || "Unknown error"}`)
+			toast.error(`❌ Failed to finalize: ${error.message || "Unknown error"}`)
 		} finally {
 			setFinalizingMilestone(null)
-		}
-	}
-
-	// Handle upload + propose milestone completion
-	const handleUploadProof = async (milestoneIndex: number) => {
-		if (!account) {
-			alert("Please connect your wallet first")
-			return
-		}
-
-		const file = selectedFiles[milestoneIndex]
-		if (!file) {
-			alert("Please select a file to upload")
-			return
-		}
-
-		try {
-			setUploadingProof(true)
-			// Upload ke IPFS
-			const cid = await uploadToIPFS(file)
-			const proofUri = `ipfs://${cid}`
-
-			// Kirim ke smart contract
-			const hash = await proposeMilestoneCompletion(
-				BigInt(projectId),
-				milestoneIndex,
-				proofUri
-			)
-
-			alert(`Proof uploaded & proposal submitted!\nTransaction: ${hash}`)
-			await fetchProjectDetails()
-		} catch (err: any) {
-			console.error("Error proposing milestone:", err)
-			alert(`Failed to propose milestone: ${err.message || "Unknown error"}`)
-		} finally {
-			setUploadingProof(false)
 		}
 	}
 
@@ -455,6 +413,20 @@ export default function ProjectDetailPage() {
 	const progress = goalEth > 0 ? (raisedEth / goalEth) * 100 : 0
 	const remaining = Math.max(goalEth - raisedEth, 0)
 
+	// === Batas harga tier berdasar persentase target ===
+	const silverMinEth = goalEth * 0.20;
+	const goldMinEth = goalEth * 0.30;
+
+	// Ambil reward/benefits dari metadata.tiers berdasarkan nama (bronze/silver/gold)
+	const getTierRewardFromMeta = (tierName: string) => {
+	const tiers = Array.isArray(metadata?.tiers) ? metadata.tiers : [];
+	const found = tiers.find(
+		(t: any) => String(t?.name || "").toLowerCase() === tierName.toLowerCase()
+	);
+	return found?.benefits || found?.description || "";
+	};
+
+
 	return (
 		<div className="min-h-screen bg-white dark:bg-slate-950">
 			<TopNav />
@@ -535,69 +507,123 @@ export default function ProjectDetailPage() {
 								</div>
 							</div>
 						</div>
+						
+						{/* Supporter Tiers (Bronze / Silver / Gold) */}
+						<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
+						<h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+							<Award className="w-6 h-6" />
+							Supporter Tiers
+						</h2>
 
-						{/* Supporter Tiers Section */}
-						{metadata?.tiers && Array.isArray(metadata.tiers) && metadata.tiers.length > 0 && (
-							<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
-								<h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-									<Award className="w-6 h-6" />
-									Supporter Tiers
-								</h2>
-								
-								{/* All Tiers */}
-								<div className="space-y-3">
-									{metadata.tiers
-										.sort((a: TierData, b: TierData) => 
-											parseFloat(a.minContribution) - parseFloat(b.minContribution)
-										)
-										.map((tier: TierData, index: number) => {
-											const isUserCurrentTier = userTier?.name === tier.name
-											
-											return (
-												<div
-													key={index}
-													className={`p-4 rounded-lg border-2 transition-all ${
-														isUserCurrentTier
-															? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-															: 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700'
-													}`}
-												>
-													<div className="flex items-center gap-3 mb-2">
-														<div className={`p-2 bg-gradient-to-br ${getTierColor(tier.name)} rounded-lg`}>
-															{getTierIcon(tier.name)}
-														</div>
-														<div className="flex-1">
-															<div className="flex items-center gap-2">
-																<h3 className="font-semibold">{tier.name}</h3>
-																{isUserCurrentTier && (
-																	<span className="text-xs px-2 py-0.5 bg-purple-500 text-white rounded-full">
-																		YOUR TIER
-																	</span>
-																)}
-															</div>
-															<p className="text-sm text-gray-600 dark:text-gray-400">
-																Min. {tier.minContribution} ETH
-															</p>
-														</div>
-													</div>
-													{tier.benefits && (
-														<p className="text-sm text-gray-700 dark:text-gray-300 ml-11">
-															{tier.benefits}
-														</p>
-													)}
-												</div>
-											)
-										})}
+						<div className="space-y-3">
+							{/* GOLD */}
+							<div
+							className={`p-4 rounded-lg border-2 transition-all ${
+								userTier?.name?.toLowerCase() === "gold"
+								? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
+								: "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700"
+							}`}
+							>
+							<div className="flex items-center gap-3 mb-2">
+								<div className={`p-2 bg-gradient-to-br ${getTierColor("gold")} rounded-lg`}>
+								{getTierIcon("gold")}
+								</div>
+								<div className="flex-1">
+								<div className="flex items-center gap-2">
+									<h3 className="font-semibold">Gold</h3>
+									{userTier?.name?.toLowerCase() === "gold" && (
+									<span className="text-xs px-2 py-0.5 bg-purple-500 text-white rounded-full">
+										YOUR TIER
+									</span>
+									)}
+								</div>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									≥ {goldMinEth.toFixed(4)} ETH <span className="opacity-70">(30% of target)</span>
+								</p>
 								</div>
 							</div>
-						)}
+							{getTierRewardFromMeta("gold") && (
+								<p className="text-sm text-gray-700 dark:text-gray-300 ml-11">
+								{getTierRewardFromMeta("gold")}
+								</p>
+							)}
+							</div>
+
+							{/* SILVER */}
+							<div
+							className={`p-4 rounded-lg border-2 transition-all ${
+								userTier?.name?.toLowerCase() === "silver"
+								? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
+								: "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700"
+							}`}
+							>
+							<div className="flex items-center gap-3 mb-2">
+								<div className={`p-2 bg-gradient-to-br ${getTierColor("silver")} rounded-lg`}>
+								{getTierIcon("silver")}
+								</div>
+								<div className="flex-1">
+								<div className="flex items-center gap-2">
+									<h3 className="font-semibold">Silver</h3>
+									{userTier?.name?.toLowerCase() === "silver" && (
+									<span className="text-xs px-2 py-0.5 bg-purple-500 text-white rounded-full">
+										YOUR TIER
+									</span>
+									)}
+								</div>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									≥ {silverMinEth.toFixed(4)} ETH <span className="opacity-70">(20% of target)</span>
+								</p>
+								</div>
+							</div>
+							{getTierRewardFromMeta("silver") && (
+								<p className="text-sm text-gray-700 dark:text-gray-300 ml-11">
+								{getTierRewardFromMeta("silver")}
+								</p>
+							)}
+							</div>
+
+							{/* BRONZE */}
+							<div
+							className={`p-4 rounded-lg border-2 transition-all ${
+								userTier?.name?.toLowerCase() === "bronze"
+								? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
+								: "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700"
+							}`}
+							>
+							<div className="flex items-center gap-3 mb-2">
+								<div className={`p-2 bg-gradient-to-br ${getTierColor("bronze")} rounded-lg`}>
+								{getTierIcon("bronze")}
+								</div>
+								<div className="flex-1">
+								<div className="flex items-center gap-2">
+									<h3 className="font-semibold">Bronze</h3>
+									{userTier?.name?.toLowerCase() === "bronze" && (
+									<span className="text-xs px-2 py-0.5 bg-purple-500 text-white rounded-full">
+										YOUR TIER
+									</span>
+									)}
+								</div>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									&lt; {silverMinEth.toFixed(4)} ETH <span className="opacity-70">(&lt;20% of target)</span>
+								</p>
+								</div>
+							</div>
+							{getTierRewardFromMeta("bronze") && (
+								<p className="text-sm text-gray-700 dark:text-gray-300 ml-11">
+								{getTierRewardFromMeta("bronze")}
+								</p>
+							)}
+							</div>
+						</div>
+						</div>
+
 
 						{/* Milestones */}
 						<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6">
 							<h2 className="text-2xl font-bold mb-4">Milestones</h2>
 							<div className="space-y-4">
 								{milestones.map((milestone) => {
-									const isVoting = milestone.status === 1 && !milestone.finalized
+									const isVoting = milestone.index > 0 && milestone.status === 1 && !milestone.finalized
 									const canVote = isUserSupporter && isVoting
 									const canFinalize = isVoting && Number(milestone.voteDeadline) <= Math.floor(Date.now() / 1000)
 									const votePercentage = milestone.totalVotes > 0n 
@@ -652,34 +678,7 @@ export default function ProjectDetailPage() {
 														</span>
 													)}
 												</div>
-											</div>
-											
-											{/* Proof Upload (Creator Only) */}
-											{account?.toLowerCase() === project.creator.toLowerCase() &&
-												milestone.released &&
-												!milestone.completed &&
-												milestone.status === 0 && (
-												<div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-													<p className="text-sm font-medium mb-2">Upload progress proof (start milestone voting):</p>
-													<input
-														type="file"
-														onChange={(e) =>
-															setSelectedFiles((prev) => ({
-																...prev,
-																[milestone.index]: e.target.files?.[0] || null,
-															}))
-														}
-														className="text-sm mb-2"
-													/>
-													<button
-														onClick={() => handleUploadProof(milestone.index)}
-														disabled={uploadingProof}
-														className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm"
-													>
-														{uploadingProof ? "Uploading..." : "Submit Proof & Start Voting"}
-													</button>
-												</div>
-											)}
+											</div>																			
 
 											{/* Voting Section */}
 											{isVoting && (

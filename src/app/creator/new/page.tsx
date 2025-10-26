@@ -25,16 +25,22 @@ export default function NewProjectPage() {
 		milestone2Amount: "",
 		milestone3Name: "",
 		milestone3Amount: "",
-		tier1Name: "",
-		tier1MinContribution: "",
 		tier1Benefits: "",
-		tier2Name: "",
-		tier2MinContribution: "",
 		tier2Benefits: "",
-		tier3Name: "",
-		tier3MinContribution: "",
 		tier3Benefits: "",
 	})
+	const decimalsFromStep = (step: number) => {
+	const s = step.toString();
+	return s.includes(".") ? s.split(".")[1].length : 0;
+	};
+
+	const roundToStep = (raw: string, step: number, min: number) => {
+	const v = Number(raw);
+	if (!Number.isFinite(v)) return "";
+	const rounded = Math.max(min, Math.round(v / step) * step);
+	return rounded.toFixed(decimalsFromStep(step));
+	};
+
 
 	useEffect(() => {
 		checkConnection()
@@ -68,32 +74,44 @@ export default function NewProjectPage() {
 			return
 		}
 
+		const target = Number(formData.targetAmount);
+		if (!Number.isFinite(target) || target < 0.001) {
+			alert("Target Amount minimal 0.001 ETH dan tidak boleh 0/negatif");
+			return;
+		}
+
+		const m1 = Number(formData.milestone1Amount);
+		const m2 = Number(formData.milestone2Amount);
+		const m3 = Number(formData.milestone3Amount);
+
+		const totalMilestone = m1 + m2 + m3;
+			if (totalMilestone > target) {
+			alert(
+				`Total milestone (${totalMilestone} ETH) tidak boleh lebih besar dari target project (${target} ETH)`
+			);
+			return;
+		}
+
+		if ([m1, m2, m3].some((v) => !Number.isFinite(v) || v < 0.0001)) {
+			alert("Semua Milestone Amount minimal 0.0001 ETH dan tidak boleh 0/negatif");
+			return;
+		}
+
+
 		try {
 			setLoading(true)
 			setUploadingMetadata(true)
 
 			// Step 1: Generate and upload metadata to Pinata
 			const metadata = {
-				name: formData.title,
-				description: formData.description,
-				image: formatIPFSUri(formData.imageCID.trim()),
-				tiers: [
-					{
-						name: formData.tier1Name,
-						minContribution: formData.tier1MinContribution,
-						benefits: formData.tier1Benefits,
-					},
-					{
-						name: formData.tier2Name,
-						minContribution: formData.tier2MinContribution,
-						benefits: formData.tier2Benefits,
-					},
-					{
-						name: formData.tier3Name,
-						minContribution: formData.tier3MinContribution,
-						benefits: formData.tier3Benefits,
-					},
-				],
+			name: formData.title,
+			description: formData.description,
+			image: formatIPFSUri(formData.imageCID.trim()),
+			tiers: [
+				{ name: "Bronze", benefits: formData.tier1Benefits },
+				{ name: "Silver", benefits: formData.tier2Benefits },
+				{ name: "Gold",   benefits: formData.tier3Benefits },
+			],
 			}
 
 			const metadataCID = await uploadMetadataToPinata(metadata)
@@ -209,14 +227,21 @@ export default function NewProjectPage() {
 							</label>
 							<input
 								type="number"
-								step="0.01"
+								step="0.001"
+								min="0.001"
 								name="targetAmount"
 								value={formData.targetAmount}
 								onChange={handleChange}
+								onBlur={(e) =>
+									setFormData((p) => ({
+									...p,
+									targetAmount: roundToStep(e.target.value, 0.001, 0.001),
+									}))
+								}
 								required
 								className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700"
-								placeholder="0.00"
-							/>
+								placeholder="0.001"
+								/>
 						</div>
 					</div>
 
@@ -307,18 +332,21 @@ export default function NewProjectPage() {
 											Amount (ETH) <span className="text-red-500">*</span>
 										</label>
 										<input
-											type="number"
-											step="0.01"
-											name={`milestone${num}Amount`}
-											value={
-												formData[
-													`milestone${num}Amount` as keyof typeof formData
-												]
-											}
-											onChange={handleChange}
-											required
-											className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
-											placeholder="0.00"
+										type="number"
+										step="0.0001"
+										min="0.0001"
+										name={`milestone${num}Amount`}
+										value={formData[`milestone${num}Amount` as keyof typeof formData]}
+										onChange={handleChange}
+										onBlur={(e) =>
+											setFormData((p) => ({
+											...p,
+											[`milestone${num}Amount`]: roundToStep(e.target.value, 0.0001, 0.0001),
+											}) as typeof p)
+										}
+										required
+										className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
+										placeholder="≥ 0.0001"
 										/>
 									</div>
 								</div>
@@ -328,72 +356,41 @@ export default function NewProjectPage() {
 
 					{/* Tiers Section */}
 					<div className="border-t pt-6 dark:border-slate-700">
-						<h2 className="text-xl font-semibold mb-4">Supporter Tiers</h2>
+					<h2 className="text-xl font-semibold mb-4">Supporter Tiers</h2>
 
-						<div className="space-y-4">
-							{[1, 2, 3].map((num) => (
-								<div
-									key={num}
-									className="mb-6 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg"
-								>
-									<h3 className="font-medium mb-3">Tier {num}</h3>
-									<div className="space-y-3">
-										<div>
-											<label className="block text-sm font-medium mb-1">
-												Tier Name <span className="text-red-500">*</span>
-											</label>
-											<input
-												type="text"
-												name={`tier${num}Name`}
-												value={
-													formData[`tier${num}Name` as keyof typeof formData]
-												}
-												onChange={handleChange}
-												required
-												className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
-												placeholder={`e.g., Bronze Supporter`}
-											/>
-										</div>
-										<div>
-											<label className="block text-sm font-medium mb-1">
-												Min. Contribution (ETH){" "}
-												<span className="text-red-500">*</span>
-											</label>
-											<input
-												type="number"
-												step="0.01"
-												name={`tier${num}MinContribution`}
-												value={
-													formData[
-														`tier${num}MinContribution` as keyof typeof formData
-													]
-												}
-												onChange={handleChange}
-												required
-												className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
-												placeholder="0.00"
-											/>
-										</div>
-										<div>
-											<label className="block text-sm font-medium mb-1">
-												Benefits
-											</label>
-											<textarea
-												name={`tier${num}Benefits`}
-												value={
-													formData[`tier${num}Benefits` as keyof typeof formData]
-												}
-												onChange={handleChange}
-												rows={2}
-												className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
-												placeholder="e.g., Supporter badge, Early access to updates"
-											/>
-										</div>
-									</div>
-								</div>
-							))}
+					{["Bronze", "Silver", "Gold"].map((label, idx) => {
+						const num = idx + 1 as 1 | 2 | 3
+						const key = `tier${num}Benefits` as const
+						return (
+						<div key={label} className="mb-6 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg">
+							<h3 className="font-medium mb-3">{label}</h3>
+							<div className="space-y-3">
+							<div>
+								<label className="block text-sm font-medium mb-1">
+								Rewards / Benefits untuk tier {label} <span className="text-red-500">*</span>
+								</label>
+								<textarea
+								name={key}
+								value={formData[key]}
+								onChange={handleChange}
+								rows={2}
+								required
+								className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
+								placeholder={
+									label === "Bronze"
+									? "e.g., Supporter badge, ucapan terima kasih"
+									: label === "Silver"
+									? "e.g., Semua Bronze + early access update"
+									: "e.g., Semua Silver + nama di credit & sneak-peek build"
+								}
+								/>
+							</div>
+							</div>
 						</div>
+						)
+					})}
 					</div>
+
 
 					<button
 						type="submit"

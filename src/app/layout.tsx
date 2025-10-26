@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Web3Provider } from "@/providers/Web3Provider";
+import { Toaster } from "react-hot-toast"
 import "./globals.css";
 
 const geist = Inter({ subsets: ["latin"] });
@@ -48,6 +49,33 @@ export default function RootLayout({
 			</head>
 			<body className={`${geist.className} font-sans antialiased`}>
 				<Web3Provider>{children}</Web3Provider>
+
+				{/* 🔔 Toast notification global */}
+				<Toaster
+					position="top-right"
+					toastOptions={{
+						style: {
+							background: "#1E293B", // dark slate
+							color: "#fff",
+							borderRadius: "10px",
+							padding: "10px 16px",
+							fontSize: "14px",
+						},
+						success: {
+							iconTheme: {
+								primary: "#10B981", // green
+								secondary: "#fff",
+							},
+						},
+						error: {
+							iconTheme: {
+								primary: "#EF4444", // red
+								secondary: "#fff",
+							},
+						},
+					}}
+				/>
+
 				<Analytics />
 			</body>
 		</html>

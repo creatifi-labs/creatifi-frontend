@@ -48,34 +48,33 @@ export default function RootLayout({
 				/>
 			</head>
 			<body className={`${geist.className} font-sans antialiased`}>
-				<Web3Provider>{children}</Web3Provider>
-
-				{/* 🔔 Toast notification global */}
-				<Toaster
-					position="top-right"
-					toastOptions={{
-						style: {
-							background: "#1E293B", // dark slate
-							color: "#fff",
-							borderRadius: "10px",
-							padding: "10px 16px",
-							fontSize: "14px",
-						},
-						success: {
-							iconTheme: {
-								primary: "#10B981", // green
-								secondary: "#fff",
+				<Web3Provider>
+					{children}
+					<Toaster 
+						position="top-center"
+						toastOptions={{
+							className: 'dark:bg-slate-800 dark:text-white',
+							style: {
+								background: 'var(--card)',
+								color: 'var(--card-foreground)',
 							},
-						},
-						error: {
-							iconTheme: {
-								primary: "#EF4444", // red
-								secondary: "#fff",
+							success: {
+								duration: 3000,
+								iconTheme: {
+									primary: '#10b981',
+									secondary: '#fff',
+								},
 							},
-						},
-					}}
-				/>
-
+							error: {
+								duration: 4000,
+								iconTheme: {
+									primary: '#ef4444',
+									secondary: '#fff',
+								},
+							},
+						}}
+					/>
+				</Web3Provider>
 				<Analytics />
 			</body>
 		</html>

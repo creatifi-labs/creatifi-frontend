@@ -8,6 +8,7 @@ import { uploadMetadataToPinata, formatIPFSUri } from "@/lib/pinata"
 import { TopNav } from "@/components/top-nav"
 import { Footer } from "@/components/footer"
 import { Loader2 } from "lucide-react"
+import toast, { Toaster } from "react-hot-toast"
 
 export default function NewProjectPage() {
 	const router = useRouter()
@@ -65,18 +66,18 @@ export default function NewProjectPage() {
 		e.preventDefault()
 
 		if (!account) {
-			alert("Please connect your wallet first")
+			toast.error("Please connect your wallet first")
 			return
 		}
 
 		if (!formData.imageCID.trim()) {
-			alert("Please provide Image CID from Pinata")
+			toast.error("Please provide Image CID from Pinata")
 			return
 		}
 
 		const target = Number(formData.targetAmount);
 		if (!Number.isFinite(target) || target < 0.001) {
-			alert("Target Amount minimal 0.001 ETH dan tidak boleh 0/negatif");
+			toast.error("Target Amount minimal 0.001 ETH dan tidak boleh 0/negatif");
 			return;
 		}
 
@@ -85,24 +86,25 @@ export default function NewProjectPage() {
 		const m3 = Number(formData.milestone3Amount);
 
 		const totalMilestone = m1 + m2 + m3;
-			if (totalMilestone > target) {
-			alert(
+		if (totalMilestone > target) {
+			toast.error(
 				`Total milestone (${totalMilestone} ETH) tidak boleh lebih besar dari target project (${target} ETH)`
 			);
 			return;
 		}
 
 		if ([m1, m2, m3].some((v) => !Number.isFinite(v) || v < 0.0001)) {
-			alert("Semua Milestone Amount minimal 0.0001 ETH dan tidak boleh 0/negatif");
+			toast.error("Semua Milestone Amount minimal 0.0001 ETH dan tidak boleh 0/negatif");
 			return;
 		}
-
 
 		try {
 			setLoading(true)
 			setUploadingMetadata(true)
 
 			// Step 1: Generate and upload metadata to Pinata
+			toast.loading("Uploading metadata to IPFS...", { id: "upload" })
+
 			const metadata = {
 			name: formData.title,
 			description: formData.description,
@@ -117,9 +119,12 @@ export default function NewProjectPage() {
 			const metadataCID = await uploadMetadataToPinata(metadata)
 			const rewardURI = formatIPFSUri(metadataCID)
 
+			toast.success("Metadata uploaded successfully!", { id: "upload" })
 			setUploadingMetadata(false)
 
 			// Step 2: Create project on blockchain
+			toast.loading("Creating project on blockchain...", { id: "create" })
+
 			const milestoneNames: [string, string, string] = [
 				formData.milestone1Name,
 				formData.milestone2Name,
@@ -140,13 +145,20 @@ export default function NewProjectPage() {
 				rewardURI
 			)
 
-			alert(
-				`Project created successfully!\nTransaction: ${hash}\nMetadata CID: ${metadataCID}`
+			toast.success(
+				`🎉 Project created successfully!\nTransaction: ${hash.slice(0, 10)}...${hash.slice(-8)}`,
+				{ id: "create", duration: 5000 }
 			)
-			router.push("/creator")
+
+			// Redirect after 2 seconds
+			setTimeout(() => {
+				router.push("/creator")
+			}, 2000)
 		} catch (error) {
 			console.error("Error creating project:", error)
-			alert("Error: " + (error as Error).message)
+			toast.error("Failed to create project: " + (error as Error).message, { 
+				duration: 5000 
+			})
 		} finally {
 			setLoading(false)
 			setUploadingMetadata(false)
@@ -164,6 +176,29 @@ export default function NewProjectPage() {
 
 	return (
 		<div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col">
+			<Toaster 
+				position="top-center"
+				toastOptions={{
+					style: {
+						background: '#1e293b',
+						color: '#fff',
+					},
+					success: {
+						duration: 3000,
+						iconTheme: {
+							primary: '#10b981',
+							secondary: '#fff',
+						},
+					},
+					error: {
+						duration: 4000,
+						iconTheme: {
+							primary: '#ef4444',
+							secondary: '#fff',
+						},
+					},
+				}}
+			/>
 			<TopNav />
 
 			<div className="flex-1 container mx-auto px-4 py-8 max-w-2xl w-full">
@@ -324,7 +359,13 @@ export default function NewProjectPage() {
 											onChange={handleChange}
 											required
 											className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
-											placeholder={`e.g., Initial Development Phase`}
+											placeholder={
+												num === 1
+													? "e.g., Initial Development & Planning"
+													: num === 2
+													? "e.g., Core Features Implementation"
+													: "e.g., Final Testing & Launch"
+											}
 										/>
 									</div>
 									<div>
@@ -367,7 +408,7 @@ export default function NewProjectPage() {
 							<div className="space-y-3">
 							<div>
 								<label className="block text-sm font-medium mb-1">
-								Rewards / Benefits untuk tier {label} <span className="text-red-500">*</span>
+								Rewards / Benefits for {label} tier <span className="text-red-500">*</span>
 								</label>
 								<textarea
 								name={key}
@@ -378,10 +419,10 @@ export default function NewProjectPage() {
 								className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
 								placeholder={
 									label === "Bronze"
-									? "e.g., Supporter badge, ucapan terima kasih"
+									? "e.g., Supporter badge, thank you message"
 									: label === "Silver"
-									? "e.g., Semua Bronze + early access update"
-									: "e.g., Semua Silver + nama di credit & sneak-peek build"
+									? "e.g., All Bronze + early access to updates"
+									: "e.g., All Silver + name in credits & sneak-peek builds"
 								}
 								/>
 							</div>

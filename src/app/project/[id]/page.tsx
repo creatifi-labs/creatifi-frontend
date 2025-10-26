@@ -547,9 +547,9 @@ export default function ProjectDetailPage() {
 
 							<div className="grid grid-cols-2 gap-4 text-sm">
 								<div>
-									<p className="text-gray-500 dark:text-gray-400">Creator</p>
-									<p className="font-mono">
-										{project.creator.slice(0, 6)}...{project.creator.slice(-4)}
+									<p className="text-gray-500 dark:text-gray-400 mb-1">Creator</p>
+									<p className="font-mono text-xs break-all">
+										{project.creator}
 									</p>
 								</div>
 								<div>

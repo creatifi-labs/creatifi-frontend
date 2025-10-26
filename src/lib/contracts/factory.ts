@@ -90,7 +90,7 @@ export async function createProject(
   milestoneNames: [string, string, string],
   milestoneAmounts: [bigint, bigint, bigint],
   rewardURI: string
-) {
+): Promise<string> {
   // FORCE SWITCH KE SEPOLIA DULU
   await switchToSepolia();
 
@@ -113,16 +113,34 @@ export async function createProject(
   });
 
   try {
+    // Step 1: Estimate gas menggunakan publicClient
+    console.log('⛽ Estimating gas...');
+    const publicClient = getPublicClient();
+    
+    const estimatedGas = await publicClient.estimateContractGas({
+      address: FACTORY_ADDRESS,
+      abi: factoryABI,
+      functionName: 'createProject',
+      args: [title, targetAmount, milestoneNames, milestoneAmounts, rewardURI],
+      account,
+    });
+
+    // Step 2: Tambahkan buffer 30% untuk keamanan
+    const gasLimit = (estimatedGas * 130n) / 100n;
+    console.log(`⛽ Estimated Gas: ${estimatedGas.toString()}`);
+    console.log(`⛽ Gas Limit (with 30% buffer): ${gasLimit.toString()}`);
+
+    // Step 3: Kirim transaksi dengan gas limit yang sudah ditambah buffer
     const hash = await walletClient.writeContract({
       address: FACTORY_ADDRESS,
       abi: factoryABI,
       functionName: 'createProject',
       args: [title, targetAmount, milestoneNames, milestoneAmounts, rewardURI],
       account,
-      // Tidak perlu tambahkan chain di sini karena sudah di WalletClient
-      gas: 500000n, // Set manual gas limit
+      gas: gasLimit, // 👈 Set gas limit explicitly dengan buffer 30%
     });
 
+    console.log('✅ Transaction sent:', hash);
     return hash;
   } catch (error: any) {
     console.error('Error creating project:', error);

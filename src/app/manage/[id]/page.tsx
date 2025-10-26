@@ -333,9 +333,10 @@ export default function ManageProjectPage() {
 							<div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
 								<h4 className="font-semibold mb-2">📋 How Milestones Work:</h4>
 								<ul className="space-y-1 text-gray-700 dark:text-gray-300">
-									<li>• <strong>Milestone 1:</strong> Release directly after 100% funded (no voting needed)</li>
-									<li>• <strong>Milestone 2 & 3:</strong> Upload proof → 5 days voting → Release if approved</li>
-									<li>• Voting requires &gt;50% agree votes to pass</li>
+									<li>• <strong>Step 1:</strong> Release M1 → Upload proof → Voting (5 days) → Release M2</li>
+									<li>• <strong>Step 2:</strong> Release M2 → Upload proof → Voting (5 days) → Release M3</li>
+									<li>• <strong>Step 3:</strong> Release M3 → Upload proof → Voting (5 days) → Project Complete</li>
+									<li>• Each milestone needs &gt;50% agree votes to proceed</li>
 								</ul>
 							</div>
 
@@ -347,29 +348,27 @@ export default function ManageProjectPage() {
 										: 0
 									const timeRemaining = isVoting ? getTimeRemaining(milestone.voteDeadline) : null
 
-									// Milestone 1: Can release directly if funded
-									const canReleaseMilestone1 = milestone.index === 0 
+									// LOGIC BARU SESUAI FLOW:
+									
+									// M1: Bisa release jika project 100% funded
+									const canReleaseM1 = milestone.index === 0 
 										&& !milestone.released 
 										&& project.fullyFunded
 
-									// Milestone 2/3: Can release after voting passed and finalized
-									const canReleaseMilestone23 = milestone.index > 0 
-										&& !milestone.released 
-										&& milestone.completed 
-										&& milestone.finalized
+									// M2: Bisa release jika M1 COMPLETED (voting passed)
+									const canReleaseM2 = milestone.index === 1
+										&& !milestone.released
+										&& milestones[0].completed
 
-									// Can propose logic
-									let canPropose = false
-									if (milestone.index === 1) {
-										canPropose = milestones[0].released 
-											&& !milestone.completed 
-											&& milestone.status === 0
-									} else if (milestone.index === 2) {
-										canPropose = milestones[1].released 
-											&& milestones[1].completed 
-											&& !milestone.completed 
-											&& milestone.status === 0
-									}
+									// M3: Bisa release jika M2 COMPLETED (voting passed)
+									const canReleaseM3 = milestone.index === 2
+										&& !milestone.released
+										&& milestones[1].completed
+
+									// Upload proof: Milestone harus RELEASED dulu, belum completed, belum ada voting aktif
+									const canPropose = milestone.released 
+										&& !milestone.completed 
+										&& milestone.status === 0
 
 									return (
 										<div
@@ -379,14 +378,14 @@ export default function ManageProjectPage() {
 											<div className="flex items-center gap-4">
 												<div
 													className={`w-10 h-10 rounded-full flex items-center justify-center ${
-														milestone.released && milestone.completed
+														milestone.completed
 															? "bg-green-500 text-white"
 															: milestone.released
 															? "bg-blue-500 text-white"
 															: "bg-gray-300 dark:bg-slate-600 text-gray-600 dark:text-gray-400"
 													}`}
 												>
-													{milestone.released && milestone.completed ? (
+													{milestone.completed ? (
 														<Check className="w-5 h-5" />
 													) : milestone.released ? (
 														<DollarSign className="w-5 h-5" />
@@ -403,9 +402,9 @@ export default function ManageProjectPage() {
 													</p>
 												</div>
 												<div>
-													{milestone.released && milestone.completed ? (
+													{milestone.completed ? (
 														<span className="text-xs px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
-															✓ Released & Completed
+															✓ Completed
 														</span>
 													) : milestone.released ? (
 														<span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
@@ -413,7 +412,7 @@ export default function ManageProjectPage() {
 														</span>
 													) : isVoting ? (
 														<span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full">
-															⏳ Voting in Progress
+															⏳ Voting
 														</span>
 													) : (
 														<span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 rounded-full">
@@ -423,11 +422,14 @@ export default function ManageProjectPage() {
 												</div>
 											</div>
 
-											{/* Release Milestone 1 Button */}
-											{canReleaseMilestone1 && (
+											{/* Release Milestone 1 */}
+											{canReleaseM1 && (
 												<div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
 													<p className="text-sm font-medium mb-2 text-green-800 dark:text-green-200">
-														🎉 Project fully funded! Release Milestone 1 to receive {formatEther(milestone.amount)} ETH
+														🎉 Release Milestone 1 to receive {formatEther(milestone.amount)} ETH
+													</p>
+													<p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+														After releasing, upload proof of progress to unlock Milestone 2.
 													</p>
 													<button
 														onClick={() => handleReleaseMilestone(milestone.index)}
@@ -437,23 +439,26 @@ export default function ManageProjectPage() {
 														{releasingMilestone === milestone.index ? (
 															<>
 																<Loader2 className="w-4 h-4 animate-spin" />
-																Releasing Funds...
+																Releasing...
 															</>
 														) : (
 															<>
 																<DollarSign className="w-4 h-4" />
-																Release Milestone 1 Funds
+																Release Milestone 1
 															</>
 														)}
 													</button>
 												</div>
 											)}
 
-											{/* Release Milestone 2/3 After Voting Passed */}
-											{canReleaseMilestone23 && (
+											{/* Release Milestone 2 */}
+											{canReleaseM2 && (
 												<div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
 													<p className="text-sm font-medium mb-2 text-green-800 dark:text-green-200">
-														✓ Voting passed! Release funds to receive {formatEther(milestone.amount)} ETH
+														✓ M1 voting passed! Release Milestone 2 to receive {formatEther(milestone.amount)} ETH
+													</p>
+													<p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+														After releasing, upload proof of progress to unlock Milestone 3.
 													</p>
 													<button
 														onClick={() => handleReleaseMilestone(milestone.index)}
@@ -463,45 +468,61 @@ export default function ManageProjectPage() {
 														{releasingMilestone === milestone.index ? (
 															<>
 																<Loader2 className="w-4 h-4 animate-spin" />
-																Releasing Funds...
+																Releasing...
 															</>
 														) : (
 															<>
 																<DollarSign className="w-4 h-4" />
-																Release Milestone {milestone.index + 1} Funds
+																Release Milestone 2
 															</>
 														)}
 													</button>
 												</div>
 											)}
 
-											{/* Upload Proof Section */}
+											{/* Release Milestone 3 */}
+											{canReleaseM3 && (
+												<div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+													<p className="text-sm font-medium mb-2 text-green-800 dark:text-green-200">
+														✓ M2 voting passed! Release final Milestone 3 to receive {formatEther(milestone.amount)} ETH
+													</p>
+													<p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+														After releasing, upload final proof. If voting passes, project is complete!
+													</p>
+													<button
+														onClick={() => handleReleaseMilestone(milestone.index)}
+														disabled={releasingMilestone === milestone.index}
+														className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50"
+													>
+														{releasingMilestone === milestone.index ? (
+															<>
+																<Loader2 className="w-4 h-4 animate-spin" />
+																Releasing...
+															</>
+														) : (
+															<>
+																<DollarSign className="w-4 h-4" />
+																Release Milestone 3
+															</>
+														)}
+													</button>
+												</div>
+											)}
+
+											{/* Upload Proof - Shows AFTER milestone is released */}
 											{canPropose && (
 												<div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
 													<p className="text-sm font-medium mb-2">
-														📤 Submit progress proof for Milestone {milestone.index + 1}:
+														📤 Upload proof of progress for Milestone {milestone.index + 1}:
 													</p>
 													<p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-														Upload your proof image to <strong>Pinata</strong> or IPFS, then paste the link below.
-														This will start a 5-day voting period.
+														Upload your proof to Pinata, then paste the CID here. This starts a 5-day voting period.
 													</p>
-													{milestone.index === 1 && (
-														<p className="text-xs text-green-600 dark:text-green-400 mb-2">
-															✓ Milestone 1 has been released. You can now propose Milestone 2.
-														</p>
-													)}
-													{milestone.index === 2 && (
-														<p className="text-xs text-green-600 dark:text-green-400 mb-2">
-															✓ Milestone 2 has been completed. You can now propose Milestone 3.
-														</p>
-													)}
 													
-													{/* IPFS Link Input */}
 													<div className="mb-3">
 														<label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
-															IPFS CID (not full link)
+															IPFS CID
 														</label>
-
 														<input
 															type="text"
 															value={proofLinks[milestone.index] || ""}
@@ -514,13 +535,10 @@ export default function ManageProjectPage() {
 															placeholder="QmXxxx... or bafybeihxxx"
 															className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm"
 														/>
-														<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-															Example: ipfs://QmXxxx... or https://gateway.pinata.cloud/ipfs/QmXxxx...
-														</p>
 													</div>
 
-													{/* Preview if link exists */}
-													{proofLinks[milestone.index] && proofLinks[milestone.index].trim() && (
+													{/* Preview */}
+													{proofLinks[milestone.index]?.trim() && (
 														<div className="mb-3">
 															<p className="text-xs font-medium mb-1">Preview:</p>
 															<img
@@ -531,20 +549,18 @@ export default function ManageProjectPage() {
 																	(e.target as HTMLImageElement).style.display = 'none'
 																}}
 															/>
-
 														</div>
 													)}
 													
-													{/* Submit Button */}
 													<button
 														onClick={() => handleUploadProof(milestone.index)}
 														disabled={uploadingProof === milestone.index || !proofLinks[milestone.index]?.trim()}
-														className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+														className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50"
 													>
 														{uploadingProof === milestone.index ? (
 															<>
 																<Loader2 className="w-4 h-4 animate-spin" />
-																Submitting...
+																Uploading...
 															</>
 														) : (
 															<>
@@ -554,7 +570,7 @@ export default function ManageProjectPage() {
 														)}
 													</button>
 													<div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-														<strong>💡 Tip:</strong> Upload your image to <a href="https://app.pinata.cloud" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">Pinata</a> first, then copy the IPFS link here.
+														<strong>💡 Tip:</strong> Upload to <a href="https://app.pinata.cloud" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Pinata</a> first.
 													</div>
 												</div>
 											)}
@@ -589,7 +605,7 @@ export default function ManageProjectPage() {
 													</div>
 													{milestone.proofURI && (
 														<div className="mt-3">
-															<p className="text-xs font-medium mb-2">Progress Proof:</p>
+															<p className="text-xs font-medium mb-2">Submitted Proof:</p>
 															<a
 																href={ipfsToHttp(milestone.proofURI)}
 																target="_blank"
@@ -608,18 +624,28 @@ export default function ManageProjectPage() {
 														</div>
 													)}
 													<div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-														<strong>ℹ️ Note:</strong> After 5 days, supporters will finalize the vote. 
-														If &gt;50% agree, you can release the funds.
+														<strong>ℹ️ Note:</strong> After 5 days, anyone can finalize. If &gt;50% agree, next milestone unlocks!
 													</div>
 												</div>
 											)}
 
+											{/* Project Completed Notice */}
+											{milestone.index === 2 && milestone.completed && (
+												<div className="p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-500 rounded-lg">
+													<p className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">
+														🎉 Project Completed!
+													</p>
+													<p className="text-xs text-green-700 dark:text-green-300">
+														All milestones passed voting. Congratulations on finishing your project!
+													</p>
+												</div>
+											)}
+
 											{/* Reset Notice */}
-											{milestone.released && !milestone.completed && milestone.status === 0 && milestone.finalized && milestone.index > 0 && (
+											{milestone.released && !milestone.completed && milestone.status === 0 && milestone.finalized && (
 												<div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
 													<p className="text-xs text-orange-800 dark:text-orange-200">
-														<strong>🔄 Previous voting did not pass (&lt;50% agree).</strong> 
-														Upload new proof to start voting again.
+														<strong>🔄 Voting did not pass.</strong> Upload new proof to start voting again.
 													</p>
 												</div>
 											)}

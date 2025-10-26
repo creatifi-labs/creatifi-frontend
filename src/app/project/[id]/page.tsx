@@ -623,7 +623,8 @@ export default function ProjectDetailPage() {
 							<h2 className="text-2xl font-bold mb-4">Milestones</h2>
 							<div className="space-y-4">
 								{milestones.map((milestone) => {
-									const isVoting = milestone.index > 0 && milestone.status === 1 && !milestone.finalized
+									// SEMUA MILESTONE BISA VOTING (M1, M2, M3)
+									const isVoting = milestone.status === 1 && !milestone.finalized
 									const canVote = isUserSupporter && isVoting
 									const canFinalize = isVoting && Number(milestone.voteDeadline) <= Math.floor(Date.now() / 1000)
 									const votePercentage = milestone.totalVotes > 0n 
@@ -680,7 +681,7 @@ export default function ProjectDetailPage() {
 												</div>
 											</div>																			
 
-											{/* Voting Section */}
+											{/* Voting Section - UNTUK SEMUA MILESTONE */}
 											{isVoting && (
 												<div className="mt-3 p-3 bg-white dark:bg-slate-600 rounded-lg">
 													<div className="flex items-center justify-between mb-2">
@@ -724,17 +725,24 @@ export default function ProjectDetailPage() {
 														</div>
 													</div>
 
-													{/* Proof Link */}
+													{/* Proof Image Preview */}
 													{milestone.proofURI && (
 														<div className="mb-3">
+															<p className="text-xs font-medium mb-2">Progress Proof Submitted by Creator:</p>
 															<a
 																href={ipfsToHttp(milestone.proofURI)}
 																target="_blank"
 																rel="noopener noreferrer"
-																className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+																className="block"
 															>
-																<span>📄 View Progress Proof</span>
-																<span>→</span>
+																<img
+																	src={ipfsToHttp(milestone.proofURI)}
+																	alt="Milestone proof"
+																	className="w-full h-48 object-cover rounded-lg border-2 border-blue-500 hover:border-blue-600 transition-colors"
+																/>
+																<span className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block">
+																	📄 Click to view full image →
+																</span>
 															</a>
 														</div>
 													)}
@@ -809,11 +817,11 @@ export default function ProjectDetailPage() {
 												</div>
 											)}
 
-											{/* Reset Notice (when milestone back to Pending after failed vote) */}
+											{/* Reset Notice */}
 											{milestone.released && !milestone.completed && milestone.status === 0 && milestone.finalized && (
 												<div className="mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
 													<p className="text-xs text-orange-800 dark:text-orange-200">
-														<strong>🔄 Voting period expired or failed!</strong> Creator needs to propose completion again with new proof.
+														<strong>🔄 Voting did not pass!</strong> Creator needs to propose again with new proof.
 													</p>
 												</div>
 											)}

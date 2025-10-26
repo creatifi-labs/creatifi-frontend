@@ -365,6 +365,7 @@ export async function proposeMilestoneCompletion(
     functionName: 'proposeMilestoneCompletion',
     args: [projectId, milestoneIndex, proofURI],
     account,
+    gas: 1000000n, // Naikkan gas limit (dari default)
   });
 
   return hash;

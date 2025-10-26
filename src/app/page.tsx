@@ -90,12 +90,10 @@ export default function Home() {
                 Explore Projects
                 <ArrowRight className="w-4 h-4" />
               </a>
-              <button className="px-6 py-3 rounded-lg font-semibold border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 dark:border-accent dark:text-accent dark:hover:bg-accent dark:hover:text-slate-900">
-                <a href="/creator" >
-                  Start Projects
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-              </button>
+              <a href="/creator" className="px-6 py-3 rounded-lg font-semibold border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 dark:border-accent dark:text-accent dark:hover:bg-accent dark:hover:text-slate-900 inline-flex items-center justify-center gap-2">
+                Start Projects
+                <ArrowRight className="w-4 h-4" />
+              </a>
             </div>
           </div>
         </div>

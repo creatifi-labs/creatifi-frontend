@@ -12,6 +12,7 @@ import {
   voteMilestoneCompletion,
   finalizeMilestoneVote,
   isSupporter,
+  getContribution,
 } from "@/lib/contracts/factory"
 import { fetchMetadataFromIPFS, ipfsToHttp } from "@/lib/ipfs"
 import { formatEther, parseEther } from "viem"
@@ -61,6 +62,7 @@ export default function ProjectDetailPage() {
 	const [isUserSupporter, setIsUserSupporter] = useState(false)
 	const [votingOnMilestone, setVotingOnMilestone] = useState<number | null>(null)
 	const [finalizingMilestone, setFinalizingMilestone] = useState<number | null>(null)
+	const [userVotedMilestones, setUserVotedMilestones] = useState<Record<number, boolean>>({})
 
 	const [project, setProject] = useState<ProjectData | null>(null)
 	const [milestones, setMilestones] = useState<MilestoneData[]>([])
@@ -70,12 +72,14 @@ export default function ProjectDetailPage() {
 
 	useEffect(() => {
 		checkConnection()
-		if (projectId) {
+	}, [])
+
+	useEffect(() => {
+		if (projectId && account) {
 			fetchProjectDetails()
 		}
-	}, [projectId])
+	}, [projectId, account])
 
-	// Separate useEffect to determine user tier whenever contribution or metadata changes
 	useEffect(() => {
 		if (!metadata?.tiers || !Array.isArray(metadata.tiers) || myContribution === 0n) {
 			setUserTier(null)
@@ -98,6 +102,21 @@ export default function ProjectDetailPage() {
 		setUserTier(matchedTier)
 	}, [metadata, myContribution])
 
+	// Load voting status from localStorage
+	useEffect(() => {
+		if (account && projectId) {
+			const votingKey = `voted_${account}_${projectId}`
+			const storedVotes = localStorage.getItem(votingKey)
+			if (storedVotes) {
+				try {
+					setUserVotedMilestones(JSON.parse(storedVotes))
+				} catch (e) {
+					console.error('Failed to parse voting history', e)
+				}
+			}
+		}
+	}, [account, projectId])
+
 	const checkConnection = async () => {
 		if (typeof window !== "undefined" && window.ethereum) {
 			try {
@@ -116,6 +135,7 @@ export default function ProjectDetailPage() {
 	const fetchProjectDetails = async () => {
 		console.log('=== FETCHING PROJECT DETAILS ===')
 		console.log('Project ID:', projectId)
+		console.log('Current Account:', account)
 		
 		try {
 			setLoading(true)
@@ -174,27 +194,45 @@ export default function ProjectDetailPage() {
 				console.error("Failed to fetch metadata:", metaErr)
 			}
 
-			// Check if current user is supporter and get contribution
+			// ✅ CHECK SUPPORTER STATUS - WITH DETAILED LOGGING
 			if (account) {
+				console.log('=== CHECKING SUPPORTER STATUS ===')
+				console.log('Account to check:', account)
+				console.log('Project ID:', projectId)
+				
 				try {
-					const supporter = await isSupporter(BigInt(projectId), account)
+					// Check contribution from smart contract
+					const contribution = await getContribution(BigInt(projectId), account)
+					console.log('📊 Contribution from contract (wei):', contribution.toString())
+					console.log('📊 Contribution from contract (ETH):', formatEther(contribution))
+					
+					// Determine supporter status
+					const supporter = contribution > 0n
+					console.log('✅ Is Supporter (contribution > 0)?', supporter)
+					
 					setIsUserSupporter(supporter)
-
-					if (supporter) {
-						const { getContribution } = await import('@/lib/contracts/factory')
-						const contribution = await getContribution(BigInt(projectId), account)
-						console.log('User contribution:', formatEther(contribution), 'ETH')
-						setMyContribution(contribution)
-						// Tier will be determined by the useEffect above
-					} else {
-						setMyContribution(0n)
+					setMyContribution(contribution)
+					
+					// Additional debug: Try isSupporter function
+					const supporterCheck = await isSupporter(BigInt(projectId), account)
+					console.log('🔍 isSupporter() function result:', supporterCheck)
+					
+					if (supporter !== supporterCheck) {
+						console.warn('⚠️ MISMATCH! contribution > 0 says:', supporter, 'but isSupporter() says:', supporterCheck)
 					}
+					
 				} catch (err) {
-					console.error('Failed to check supporter status:', err)
+					console.error('❌ Failed to check supporter status:', err)
+					console.error('Error details:', err)
 				}
+			} else {
+				console.log('⚠️ No account connected, skipping supporter check')
 			}
 
 			console.log('=== FETCH COMPLETE ===')
+			console.log('Final state:')
+			console.log('- isUserSupporter:', isUserSupporter)
+			console.log('- myContribution:', myContribution.toString())
 		} catch (error) {
 			console.error("=== ERROR FETCHING PROJECT ===")
 			console.error("Error details:", error)
@@ -216,7 +254,7 @@ export default function ProjectDetailPage() {
 		e.preventDefault()
 
 		if (!account) {
-			toast.error(`❌ Failed to finalize:`)
+			toast.error("❌ Please connect your wallet")
 			return
 		}
 
@@ -265,14 +303,39 @@ export default function ProjectDetailPage() {
 		}
 	}
 
+	const saveVotingStatus = (milestoneIndex: number) => {
+		if (!account || !projectId) return
+		
+		const votingKey = `voted_${account}_${projectId}`
+		const newVotes = { ...userVotedMilestones, [milestoneIndex]: true }
+		setUserVotedMilestones(newVotes)
+		localStorage.setItem(votingKey, JSON.stringify(newVotes))
+	}
+
 	const handleVote = async (milestoneIndex: number, agree: boolean) => {
+		console.log('=== HANDLE VOTE CALLED ===')
+		console.log('Account:', account)
+		console.log('isUserSupporter:', isUserSupporter)
+		console.log('Milestone Index:', milestoneIndex)
+		console.log('Vote:', agree ? 'AGREE' : 'DISAGREE')
+		
 		if (!account) {
+			console.error('❌ No account connected')
 			alert("Please connect your wallet")
 			return
 		}
 
 		if (!isUserSupporter) {
+			console.error('❌ User is not a supporter!')
+			console.error('Current isUserSupporter value:', isUserSupporter)
+			console.error('Current myContribution:', myContribution.toString())
 			alert("Only supporters can vote")
+			return
+		}
+
+		// Check if user already voted
+		if (userVotedMilestones[milestoneIndex]) {
+			toast.error("❌ You have already voted on this milestone")
 			return
 		}
 
@@ -285,10 +348,13 @@ export default function ProjectDetailPage() {
 				agree
 			)
 
+			// Save voting status
+			saveVotingStatus(milestoneIndex)
+
 			toast.success(`🗳️ Vote submitted!\nTxn: ${hash}`)
 			await fetchProjectDetails()
 		} catch (error: any) {
-			console.error('Error voting:', error)
+			console.error('❌ Error voting:', error)
 			toast.error(`❌ Failed to vote: ${error.message || "Unknown error"}`)
 		} finally {
 			setVotingOnMilestone(null)
@@ -314,8 +380,6 @@ export default function ProjectDetailPage() {
 		}
 	}
 
-	// Handle release milestone (removed as per changes)
-
 	const getTimeRemaining = (deadline: bigint) => {
 		const now = Math.floor(Date.now() / 1000)
 		const deadlineSeconds = Number(deadline)
@@ -339,26 +403,26 @@ export default function ProjectDetailPage() {
 
 	const getTierIcon = (tierName: string) => {
 		const lowerName = tierName.toLowerCase()
-		if (lowerName.includes('gold') || lowerName.includes('premium')) {
-			return <Crown className="w-4 h-4 text-yellow-500" />
-		} else if (lowerName.includes('silver')) {
-			return <Star className="w-4 h-4 text-gray-400" />
-		} else if (lowerName.includes('bronze')) {
-			return <Award className="w-4 h-4 text-orange-600" />
-		}
+		if (lowerName.includes('gold')) return <Crown className="w-4 h-4 text-yellow-500" />
+		if (lowerName.includes('silver')) return <Star className="w-4 h-4 text-gray-400" />
+		if (lowerName.includes('bronze')) return <Award className="w-4 h-4 text-orange-600" />
 		return <Award className="w-4 h-4" />
 	}
 
 	const getTierColor = (tierName: string) => {
 		const lowerName = tierName.toLowerCase()
-		if (lowerName.includes('gold') || lowerName.includes('premium')) {
-			return 'from-yellow-400 to-yellow-600'
-		} else if (lowerName.includes('silver')) {
-			return 'from-gray-300 to-gray-500'
-		} else if (lowerName.includes('bronze')) {
-			return 'from-orange-400 to-orange-600'
-		}
+		if (lowerName.includes('gold')) return 'from-yellow-400 to-yellow-600'
+		if (lowerName.includes('silver')) return 'from-gray-300 to-gray-500'
+		if (lowerName.includes('bronze')) return 'from-orange-400 to-orange-600'
 		return 'from-blue-400 to-blue-600'
+	}
+
+	const getTierRewardFromMeta = (tierName: string) => {
+		const tiers = Array.isArray(metadata?.tiers) ? metadata.tiers : []
+		const found = tiers.find(
+			(t: any) => String(t?.name || "").toLowerCase() === tierName.toLowerCase()
+		)
+		return found?.benefits || found?.description || ""
 	}
 
 	// Auto-refresh countdown every second for active votings
@@ -395,10 +459,7 @@ export default function ProjectDetailPage() {
 				<TopNav />
 				<div className="text-center py-20">
 					<p className="text-gray-600 dark:text-gray-400">Project not found</p>
-					<button
-						onClick={() => router.push("/explore")}
-						className="mt-4 btn-gradient"
-					>
+					<button onClick={() => router.push("/explore")} className="mt-4 btn-gradient">
 						Back to Explore
 					</button>
 				</div>
@@ -416,16 +477,6 @@ export default function ProjectDetailPage() {
 	// === Batas harga tier berdasar persentase target ===
 	const silverMinEth = goalEth * 0.20;
 	const goldMinEth = goalEth * 0.30;
-
-	// Ambil reward/benefits dari metadata.tiers berdasarkan nama (bronze/silver/gold)
-	const getTierRewardFromMeta = (tierName: string) => {
-	const tiers = Array.isArray(metadata?.tiers) ? metadata.tiers : [];
-	const found = tiers.find(
-		(t: any) => String(t?.name || "").toLowerCase() === tierName.toLowerCase()
-	);
-	return found?.benefits || found?.description || "";
-	};
-
 
 	return (
 		<div className="min-h-screen bg-white dark:bg-slate-950">
@@ -496,9 +547,9 @@ export default function ProjectDetailPage() {
 
 							<div className="grid grid-cols-2 gap-4 text-sm">
 								<div>
-									<p className="text-gray-500 dark:text-gray-400 mb-1">Creator</p>
-									<p className="font-mono text-xs break-all">
-										{project.creator}
+									<p className="text-gray-500 dark:text-gray-400">Creator</p>
+									<p className="font-mono">
+										{project.creator.slice(0, 6)}...{project.creator.slice(-4)}
 									</p>
 								</div>
 								<div>
@@ -623,13 +674,24 @@ export default function ProjectDetailPage() {
 							<h2 className="text-2xl font-bold mb-4">Milestones</h2>
 							<div className="space-y-4">
 								{milestones.map((milestone) => {
-									// SEMUA MILESTONE BISA VOTING (M1, M2, M3)
 									const isVoting = milestone.status === 1 && !milestone.finalized
 									const canVote = isUserSupporter && isVoting
+									const hasVoted = userVotedMilestones[milestone.index]
 									const canFinalize = isVoting && Number(milestone.voteDeadline) <= Math.floor(Date.now() / 1000)
 									const votePercentage = milestone.totalVotes > 0n 
 										? Number((milestone.agreeCount * 100n) / milestone.totalVotes)
 										: 0
+
+									// ✅ DEBUG LOGGING FOR EACH MILESTONE
+									console.log(`Milestone ${milestone.index} debug:`, {
+										status: milestone.status,
+										finalized: milestone.finalized,
+										isVoting,
+										isUserSupporter,
+										canVote,
+										canFinalize,
+										voteDeadline: new Date(Number(milestone.voteDeadline) * 1000).toISOString(),
+									})
 
 									return (
 										<div
@@ -671,158 +733,129 @@ export default function ProjectDetailPage() {
 														</span>
 													) : milestone.released ? (
 														<span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
-															In Progress
+															Released
 														</span>
 													) : (
 														<span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 rounded-full">
-															Locked
+															Upcoming
 														</span>
 													)}
 												</div>
-											</div>																			
+											</div>
 
-											{/* Voting Section - UNTUK SEMUA MILESTONE */}
-											{isVoting && (
-												<div className="mt-3 p-3 bg-white dark:bg-slate-600 rounded-lg">
-													<div className="flex items-center justify-between mb-2">
-														<span className="text-sm font-medium">Voting Progress</span>
-														<span className={`text-xs flex items-center gap-1 ${
-															getTimeRemaining(milestone.voteDeadline).expired
-																? "text-red-600 dark:text-red-400 font-semibold"
-																: "text-gray-500 dark:text-gray-400"
-														}`}>
-															<Clock className="w-3 h-3" />
+											{/* Voting Section - Only for proposed milestones (status 1) */}
+											{milestone.status === 1 && (
+												<div className="mt-4">
+													<div className="flex items-center gap-2 mb-2">
+														<span className="text-xs text-gray-500 dark:text-gray-400">
+															Voting ends in{" "}
+														</span>
+														<span className="text-xs font-semibold">
 															{getTimeRemaining(milestone.voteDeadline).text}
 														</span>
 													</div>
 
-													{/* Expired Warning */}
-													{getTimeRemaining(milestone.voteDeadline).expired && (
-														<div className="mb-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-800 dark:text-yellow-200">
-															<strong>⚠️ Voting period ended!</strong> Anyone can finalize the voting now.
+													{/* Show voting status if user has voted */}
+													{hasVoted ? (
+														<div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+															<div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+																<Check className="w-5 h-5" />
+																<span className="font-semibold">You have already voted on this milestone</span>
+															</div>
+															<p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+																Your vote has been recorded. Results will be available after voting period ends.
+															</p>
 														</div>
-													)}
-
-													{/* Progress Bar */}
-													<div className="mb-3">
-														<div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-															<div
-																className="bg-green-500 h-2 rounded-full transition-all"
-																style={{ width: `${votePercentage}%` }}
-															/>
-														</div>
-														<div className="flex justify-between text-xs mt-1">
-															<span className="text-green-600 dark:text-green-400">
-																Agree: {milestone.agreeCount.toString()} ({votePercentage.toFixed(1)}%)
-															</span>
-															<span className="text-red-600 dark:text-red-400">
-																Disagree: {milestone.disagreeCount.toString()}
-															</span>
-														</div>
-														<div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-															Total Votes: {milestone.totalVotes.toString()}
-															{milestone.totalVotes === 0n && " (No votes yet)"}
-														</div>
-													</div>
-
-													{/* Proof Image Preview */}
-													{milestone.proofURI && (
-														<div className="mb-3">
-															<p className="text-xs font-medium mb-2">Progress Proof Submitted by Creator:</p>
-															<a
-																href={ipfsToHttp(milestone.proofURI)}
-																target="_blank"
-																rel="noopener noreferrer"
-																className="block"
-															>
-																<img
-																	src={ipfsToHttp(milestone.proofURI)}
-																	alt="Milestone proof"
-																	className="w-full h-48 object-cover rounded-lg border-2 border-blue-500 hover:border-blue-600 transition-colors"
-																/>
-																<span className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block">
-																	📄 Click to view full image →
-																</span>
-															</a>
-														</div>
-													)}
-
-													{/* Vote Buttons */}
-													{canVote && !canFinalize && (
+													) : canVote ? (
 														<div className="flex gap-2">
 															<button
 																onClick={() => handleVote(milestone.index, true)}
-																disabled={votingOnMilestone === milestone.index}
-																className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm disabled:opacity-50"
+																disabled={votingOnMilestone !== null || finalizingMilestone !== null}
+																className="flex-1 px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2
+																disabled:opacity-50
+																bg-green-500 text-white hover:bg-green-600"
 															>
 																{votingOnMilestone === milestone.index ? (
-																	<Loader2 className="w-4 h-4 animate-spin" />
+																	<Loader2 className="w-5 h-5 animate-spin" />
 																) : (
-																	<ThumbsUp className="w-4 h-4" />
+																	<ThumbsUp className="w-5 h-5" />
 																)}
 																Agree
 															</button>
 															<button
 																onClick={() => handleVote(milestone.index, false)}
-																disabled={votingOnMilestone === milestone.index}
-																className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm disabled:opacity-50"
+																disabled={votingOnMilestone !== null || finalizingMilestone !== null}
+																className="flex-1 px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2
+																disabled:opacity-50
+																bg-red-500 text-white hover:bg-red-600"
 															>
 																{votingOnMilestone === milestone.index ? (
-																	<Loader2 className="w-4 h-4 animate-spin" />
+																	<Loader2 className="w-5 h-5 animate-spin" />
 																) : (
-																	<ThumbsDown className="w-4 h-4" />
+																	<ThumbsDown className="w-5 h-5" />
 																)}
 																Disagree
 															</button>
 														</div>
+													) : !isUserSupporter ? (
+														<div className="p-3 bg-gray-100 dark:bg-slate-600 rounded-lg text-center">
+															<p className="text-sm text-gray-600 dark:text-gray-400">
+																Only supporters can vote on milestones
+															</p>
+														</div>
+													) : null}
+
+													{/* Show voting progress */}
+													{milestone.totalVotes > 0n && (
+														<div className="mt-3 space-y-2">
+															<div className="flex justify-between text-sm">
+																<span className="text-gray-600 dark:text-gray-400">Voting Progress</span>
+																<span className="font-semibold">
+																	{milestone.totalVotes.toString()} vote{Number(milestone.totalVotes) !== 1 ? 's' : ''}
+																</span>
+															</div>
+															<div className="flex gap-2 items-center">
+																<div className="flex-1 bg-gray-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden">
+																	<div
+																		className="bg-green-500 h-full transition-all"
+																		style={{ width: `${votePercentage}%` }}
+																	/>
+																</div>
+																<span className="text-sm font-semibold min-w-[50px] text-right">
+																	{votePercentage.toFixed(1)}%
+																</span>
+															</div>
+															<div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+																<span>👍 {milestone.agreeCount.toString()} Agree</span>
+																<span>👎 {milestone.disagreeCount.toString()} Disagree</span>
+															</div>
+														</div>
 													)}
 
-													{/* Finalize Button */}
-													{canFinalize && (
-														<div className="space-y-2">
-															<div className="p-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded text-xs text-purple-800 dark:text-purple-200">
-																{milestone.totalVotes === 0n ? (
-																	<>
-																		<strong>⚠️ No votes received!</strong> If finalized, milestone will be reset and creator can propose again.
-																	</>
-																) : votePercentage <= 50 ? (
-																	<>
-																		<strong>⚠️ Less than 50% agree!</strong> If finalized, milestone will be reset and creator can propose again.
-																	</>
-																) : (
-																	<>
-																		<strong>✓ More than 50% agree!</strong> If finalized, milestone will be marked as completed.
-																	</>
-																)}
-															</div>
+													{/* Finalize button - Only visible if voting has ended and user is supporter */}
+													{canFinalize && isUserSupporter && (
+														<div className="mt-4">
 															<button
 																onClick={() => handleFinalize(milestone.index)}
-																disabled={finalizingMilestone === milestone.index}
-																className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50"
+																disabled={finalizingMilestone !== null}
+																className="w-full px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2
+																disabled:opacity-50
+																bg-blue-500 text-white hover:bg-blue-600"
 															>
 																{finalizingMilestone === milestone.index ? (
-																	<Loader2 className="w-4 h-4 animate-spin" />
+																	<>
+																		<Loader2 className="w-4 h-4 animate-spin" />
+																		Finalizing...
+																	</>
 																) : (
-																	"Finalize Voting"
+																	<>
+																		<Check className="w-4 h-4" />
+																		Finalize Voting
+																	</>
 																)}
 															</button>
 														</div>
 													)}
-
-													{!canVote && !canFinalize && (
-														<p className="text-xs text-center text-gray-500 dark:text-gray-400">
-															{isUserSupporter ? "You have already voted" : "Only supporters can vote"}
-														</p>
-													)}
-												</div>
-											)}
-
-											{/* Reset Notice */}
-											{milestone.released && !milestone.completed && milestone.status === 0 && milestone.finalized && (
-												<div className="mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-													<p className="text-xs text-orange-800 dark:text-orange-200">
-														<strong>🔄 Voting did not pass!</strong> Creator needs to propose again with new proof.
-													</p>
 												</div>
 											)}
 										</div>
@@ -832,12 +865,10 @@ export default function ProjectDetailPage() {
 						</div>
 					</div>
 
-					{/* Right Column - Funding Card */}
 					<div className="lg:col-span-1">
 						<div className="card-glow rounded-xl bg-white dark:bg-slate-800 p-6 sticky top-6">
 							<h2 className="text-2xl font-bold mb-6">Support This Project</h2>
 
-							{/* Progress */}
 							<div className="mb-6">
 								<div className="flex justify-between text-sm mb-2">
 									<span className="text-gray-600 dark:text-gray-400">Raised</span>
@@ -857,7 +888,6 @@ export default function ProjectDetailPage() {
 								</div>
 							</div>
 
-							{/* Support Form */}
 							{!project.fullyFunded ? (
 								<form onSubmit={handleSupport} className="space-y-4">
 									<div>
@@ -873,64 +903,7 @@ export default function ProjectDetailPage() {
 											className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
 											disabled={supporting}
 										/>
-										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-											Amount that will go to the project (excluding platform fee and network gas fee)
-										</p>
 									</div>
-
-									{/* Fee Breakdown */}
-									{supportAmount && parseFloat(supportAmount) > 0 && (
-										<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
-											<p className="text-gray-700 dark:text-gray-300 mb-1">
-												<strong>Contribution to project:</strong> {parseFloat(supportAmount).toFixed(6)} ETH
-											</p>
-											<p className="text-gray-700 dark:text-gray-300 mb-1">
-												<strong>Platform fee (2.5%):</strong>{" "}
-												{(parseFloat(supportAmount) * (25 / (1025 - 25))).toFixed(6)} ETH
-											</p>
-											<p className="text-gray-700 dark:text-gray-300 font-semibold mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
-												<strong>Total to pay:</strong>{" "}
-												{(parseFloat(supportAmount) * (1025 / 1000)).toFixed(6)} ETH
-											</p>
-										</div>
-									)}
-
-									{/* Tier Preview in Support Form */}
-									{supportAmount && parseFloat(supportAmount) > 0 && metadata?.tiers && Array.isArray(metadata.tiers) && metadata.tiers.length > 0 && (
-										<div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-											<p className="text-xs font-medium mb-2">🎁 You'll receive:</p>
-											{(() => {
-												const amount = parseFloat(supportAmount)
-												const sortedTiers = [...metadata.tiers].sort(
-													(a: TierData, b: TierData) => parseFloat(b.minContribution) - parseFloat(a.minContribution)
-												)
-												const matchedTier = sortedTiers.find((t: TierData) => amount >= parseFloat(t.minContribution))
-												
-												if (matchedTier) {
-													return (
-														<div className="flex items-center gap-2">
-															<div className={`p-1.5 bg-gradient-to-br ${getTierColor(matchedTier.name)} rounded`}>
-																{getTierIcon(matchedTier.name)}
-															</div>
-															<div>
-																<p className="text-sm font-semibold">{matchedTier.name}</p>
-																{matchedTier.benefits && (
-																	<p className="text-xs text-gray-600 dark:text-gray-400">
-																		{matchedTier.benefits}
-																	</p>
-																)}
-															</div>
-														</div>
-													)
-												}
-												return (
-													<p className="text-xs text-gray-600 dark:text-gray-400">
-														Supporter status (increase amount for tier rewards)
-													</p>
-												)
-											})()}
-										</div>
-									)}
 
 									<button
 										type="submit"
@@ -949,7 +922,7 @@ export default function ProjectDetailPage() {
 
 									{!account && (
 										<p className="text-center text-sm text-red-500">
-											Please connect your wallet to support this project
+											Please connect your wallet
 										</p>
 									)}
 								</form>

@@ -2,7 +2,7 @@
 
 import { useAccount, useDisconnect, useBalance } from "wagmi";
 import { useConnectModal } from "@xellar/kit";
-import { Wallet, LogOut, Copy, Check, User, Sun, Moon } from "lucide-react";
+import { Wallet, LogOut, Copy, Check, User } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 export function WalletButton() {
@@ -180,42 +180,6 @@ export function WalletButton() {
                     Chain ID: {networkId}
                   </p>
                 </div>
-              </div>
-
-              {/* Dark Mode Toggle */}
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                  Theme
-                </p>
-                <button
-                  onClick={toggleDarkMode}
-                  className="w-full flex items-center justify-between bg-gray-50 dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg p-3 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    {isDarkMode ? (
-                      <>
-                        <Moon className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-medium">Dark Mode</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sun className="w-4 h-4 text-yellow-500" />
-                        <span className="text-sm font-medium">Light Mode</span>
-                      </>
-                    )}
-                  </div>
-                  <div
-                    className={`w-10 h-6 rounded-full transition-colors ${
-                      isDarkMode ? "bg-blue-600" : "bg-gray-300"
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 bg-white rounded-full mt-1 transition-transform ${
-                        isDarkMode ? "ml-5" : "ml-1"
-                      }`}
-                    />
-                  </div>
-                </button>
               </div>
 
               {/* Disconnect Button */}

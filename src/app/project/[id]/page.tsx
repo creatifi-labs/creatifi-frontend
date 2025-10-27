@@ -949,22 +949,13 @@ export default function ProjectDetailPage() {
 												Connect your wallet to support this project
 											</p>
 											<button
-												onClick={async () => {
-													if (typeof window !== "undefined" && window.ethereum) {
-														try {
-															const accounts = await window.ethereum.request({ 
-																method: 'eth_requestAccounts' 
-															})
-															if (accounts && accounts.length > 0) {
-																setAccount(accounts[0])
-																toast.success(`🔗 Wallet connected!`)
-															}
-														} catch (err: any) {
-															console.error('Failed to connect wallet:', err)
-															toast.error('❌ Failed to connect wallet')
-														}
+												onClick={() => {
+													// Trigger click on the navbar wallet button
+													const walletButton = document.querySelector('[data-wallet-connect-button]') as HTMLButtonElement
+													if (walletButton) {
+														walletButton.click()
 													} else {
-														toast.error('❌ Please install MetaMask!')
+														toast.error('⚠️ Please use the Connect Wallet button in the navigation bar')
 													}
 												}}
 												className="btn-gradient"

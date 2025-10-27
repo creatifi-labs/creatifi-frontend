@@ -200,6 +200,7 @@ export function WalletButton() {
   return (
     <button
       onClick={handleConnect}
+      data-wallet-connect-button
       className="bg-gradient-to-r from-[#335cff] to-[#6e45e2] text-white font-semibold rounded-lg px-4 py-2 hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 text-sm"
     >
       <Wallet className="w-4 h-4" />

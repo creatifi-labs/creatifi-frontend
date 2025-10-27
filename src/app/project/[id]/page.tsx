@@ -75,10 +75,22 @@ export default function ProjectDetailPage() {
 	}, [])
 
 	useEffect(() => {
-		if (projectId && account) {
+		if (projectId) {
 			fetchProjectDetails()
 		}
-	}, [projectId, account])
+	}, [projectId])
+
+	// Separate effect for checking supporter status when account changes
+	useEffect(() => {
+		if (projectId && account) {
+			checkSupporterStatus()
+		} else if (!account) {
+			// Reset supporter status when wallet disconnected
+			setIsUserSupporter(false)
+			setMyContribution(0n)
+			setUserTier(null)
+		}
+	}, [account, projectId])
 
 	useEffect(() => {
 		if (!metadata?.tiers || !Array.isArray(metadata.tiers) || myContribution === 0n) {
@@ -132,10 +144,43 @@ export default function ProjectDetailPage() {
 		}
 	}
 
+	const checkSupporterStatus = async () => {
+		if (!account) return
+
+		console.log('=== CHECKING SUPPORTER STATUS ===')
+		console.log('Account to check:', account)
+		console.log('Project ID:', projectId)
+		
+		try {
+			// Check contribution from smart contract
+			const contribution = await getContribution(BigInt(projectId), account)
+			console.log('📊 Contribution from contract (wei):', contribution.toString())
+			console.log('📊 Contribution from contract (ETH):', formatEther(contribution))
+			
+			// Determine supporter status
+			const supporter = contribution > 0n
+			console.log('✅ Is Supporter (contribution > 0)?', supporter)
+			
+			setIsUserSupporter(supporter)
+			setMyContribution(contribution)
+			
+			// Additional debug: Try isSupporter function
+			const supporterCheck = await isSupporter(BigInt(projectId), account)
+			console.log('🔍 isSupporter() function result:', supporterCheck)
+			
+			if (supporter !== supporterCheck) {
+				console.warn('⚠️ MISMATCH! contribution > 0 says:', supporter, 'but isSupporter() says:', supporterCheck)
+			}
+			
+		} catch (err) {
+			console.error('❌ Failed to check supporter status:', err)
+			console.error('Error details:', err)
+		}
+	}
+
 	const fetchProjectDetails = async () => {
 		console.log('=== FETCHING PROJECT DETAILS ===')
 		console.log('Project ID:', projectId)
-		console.log('Current Account:', account)
 		
 		try {
 			setLoading(true)
@@ -194,45 +239,7 @@ export default function ProjectDetailPage() {
 				console.error("Failed to fetch metadata:", metaErr)
 			}
 
-			// ✅ CHECK SUPPORTER STATUS - WITH DETAILED LOGGING
-			if (account) {
-				console.log('=== CHECKING SUPPORTER STATUS ===')
-				console.log('Account to check:', account)
-				console.log('Project ID:', projectId)
-				
-				try {
-					// Check contribution from smart contract
-					const contribution = await getContribution(BigInt(projectId), account)
-					console.log('📊 Contribution from contract (wei):', contribution.toString())
-					console.log('📊 Contribution from contract (ETH):', formatEther(contribution))
-					
-					// Determine supporter status
-					const supporter = contribution > 0n
-					console.log('✅ Is Supporter (contribution > 0)?', supporter)
-					
-					setIsUserSupporter(supporter)
-					setMyContribution(contribution)
-					
-					// Additional debug: Try isSupporter function
-					const supporterCheck = await isSupporter(BigInt(projectId), account)
-					console.log('🔍 isSupporter() function result:', supporterCheck)
-					
-					if (supporter !== supporterCheck) {
-						console.warn('⚠️ MISMATCH! contribution > 0 says:', supporter, 'but isSupporter() says:', supporterCheck)
-					}
-					
-				} catch (err) {
-					console.error('❌ Failed to check supporter status:', err)
-					console.error('Error details:', err)
-				}
-			} else {
-				console.log('⚠️ No account connected, skipping supporter check')
-			}
-
 			console.log('=== FETCH COMPLETE ===')
-			console.log('Final state:')
-			console.log('- isUserSupporter:', isUserSupporter)
-			console.log('- myContribution:', myContribution.toString())
 		} catch (error) {
 			console.error("=== ERROR FETCHING PROJECT ===")
 			console.error("Error details:", error)
@@ -292,8 +299,9 @@ export default function ProjectDetailPage() {
 			)
 
 
-			// Refresh project data
+			// Refresh project data and supporter status
 			await fetchProjectDetails()
+			await checkSupporterStatus()
 			setSupportAmount("")
 		} catch (error: any) {
 			console.error("Error supporting project:", error)

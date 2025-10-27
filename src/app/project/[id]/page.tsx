@@ -72,6 +72,27 @@ export default function ProjectDetailPage() {
 
 	useEffect(() => {
 		checkConnection()
+		
+		// Listen for account changes
+		if (typeof window !== "undefined" && window.ethereum) {
+			const handleAccountsChanged = (accounts: string[]) => {
+				if (accounts && accounts.length > 0) {
+					setAccount(accounts[0])
+				} else {
+					setAccount("")
+					toast.error("Wallet disconnected")
+				}
+			}
+
+			window.ethereum.on("accountsChanged", handleAccountsChanged)
+
+			// Cleanup listener
+			return () => {
+				if (window.ethereum.removeListener) {
+					window.ethereum.removeListener("accountsChanged", handleAccountsChanged)
+				}
+			}
+		}
 	}, [])
 
 	useEffect(() => {
@@ -266,7 +287,7 @@ export default function ProjectDetailPage() {
 		}
 
 		if (!supportAmount || parseFloat(supportAmount) <= 0) {
-			alert("Please enter a valid amount")
+			toast.error("Please enter a valid amount")
 			return
 		}
 
@@ -277,9 +298,6 @@ export default function ProjectDetailPage() {
 			const netAmount = parseFloat(supportAmount)
 			
 			// Calculate fee: 25/1025 ≈ 2.439% dari total
-			// Jika user mau contribute X ETH, dia harus bayar: X / (1 - fee_rate)
-			// fee_rate = 25/1025 ≈ 0.02439
-			// total = netAmount / (1 - 0.02439) = netAmount * 1.025
 			const feeNumerator = 25
 			const feeDenominator = 1025
 			const totalToPay = netAmount * (feeDenominator / (feeDenominator - feeNumerator))
@@ -295,9 +313,9 @@ export default function ProjectDetailPage() {
 			)
 
 			toast.success(
-			`🎉 Support successful!\nNet: ${netAmount} ETH\nFee: ${fee.toFixed(6)} ETH\nTotal: ${totalToPay.toFixed(6)} ETH\nTxn: ${hash}`
+				`🎉 Support successful!\nNet: ${netAmount} ETH | Fee: ${fee.toFixed(4)} ETH\nTotal: ${totalToPay.toFixed(4)} ETH`,
+				{ duration: 5000 }
 			)
-
 
 			// Refresh project data and supporter status
 			await fetchProjectDetails()
@@ -305,7 +323,29 @@ export default function ProjectDetailPage() {
 			setSupportAmount("")
 		} catch (error: any) {
 			console.error("Error supporting project:", error)
-			toast.error(`❌ Failed to support project: ${error.message || "Unknown error"}`)
+			
+			// Parse error message for user-friendly display
+			let errorMessage = "Failed to support project"
+			
+			if (error.message) {
+				const msg = error.message.toLowerCase()
+				
+				// Check for common error patterns
+				if (msg.includes("insufficient funds") || msg.includes("insufficient balance")) {
+					errorMessage = "Insufficient funds in your wallet"
+				} else if (msg.includes("user rejected") || msg.includes("user denied")) {
+					errorMessage = "Transaction rejected"
+				} else if (msg.includes("gas")) {
+					errorMessage = "Gas estimation failed"
+				} else if (msg.includes("nonce")) {
+					errorMessage = "Transaction nonce error. Please try again"
+				} else {
+					// Extract short error message (first 50 chars)
+					errorMessage = error.message.substring(0, 80)
+				}
+			}
+			
+			toast.error(`❌ ${errorMessage}`, { duration: 4000 })
 		} finally {
 			setSupporting(false)
 		}
@@ -897,43 +937,104 @@ export default function ProjectDetailPage() {
 							</div>
 
 							{!project.fullyFunded ? (
-								<form onSubmit={handleSupport} className="space-y-4">
-									<div>
-										<label className="block text-sm font-medium mb-2">
-											Contribution Amount (ETH)
-										</label>
-										<input
-											type="number"
-											step="0.001"
-											value={supportAmount}
-											onChange={(e) => setSupportAmount(e.target.value)}
-											placeholder="0.1"
-											className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
-											disabled={supporting}
-										/>
-									</div>
+								<>
+									{!account ? (
+										<div className="text-center py-8">
+											<p className="text-gray-600 dark:text-gray-400 mb-4">
+												Connect your wallet to support this project
+											</p>
+											<button
+												onClick={async () => {
+													if (typeof window !== "undefined" && window.ethereum) {
+														try {
+															const accounts = await window.ethereum.request({ 
+																method: 'eth_requestAccounts' 
+															})
+															if (accounts && accounts.length > 0) {
+																setAccount(accounts[0])
+																toast.success(`🔗 Wallet connected!`)
+															}
+														} catch (err: any) {
+															console.error('Failed to connect wallet:', err)
+															toast.error('❌ Failed to connect wallet')
+														}
+													} else {
+														toast.error('❌ Please install MetaMask!')
+													}
+												}}
+												className="btn-gradient"
+											>
+												Connect Wallet
+											</button>
+										</div>
+									) : (
+										<form onSubmit={handleSupport} className="space-y-4" key={account}>
+											<div>
+												<label className="block text-sm font-medium mb-2">
+													Contribution Amount (ETH)
+												</label>
+												<input
+													type="number"
+													step="0.001"
+													value={supportAmount}
+													onChange={(e) => setSupportAmount(e.target.value)}
+													placeholder="0.1"
+													className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600"
+													disabled={supporting}
+												/>
+												
+												{/* Fee breakdown display */}
+												{supportAmount && parseFloat(supportAmount) > 0 && (() => {
+													const netAmount = parseFloat(supportAmount)
+													const feeNumerator = 25
+													const feeDenominator = 1025
+													const totalToPay = netAmount * (feeDenominator / (feeDenominator - feeNumerator))
+													const fee = totalToPay - netAmount
+													
+													return (
+														<div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm space-y-1">
+															<div className="flex justify-between text-gray-600 dark:text-gray-400">
+																<span>Your contribution:</span>
+																<span className="font-medium">{netAmount.toFixed(4)} ETH</span>
+															</div>
+															<div className="flex justify-between text-gray-600 dark:text-gray-400">
+																<span>Platform fee (2.5%):</span>
+																<span className="font-medium">
+																	{fee.toFixed(4)} ETH
+																</span>
+															</div>
+															<div className="flex justify-between font-semibold text-gray-900 dark:text-white pt-2 border-t border-gray-200 dark:border-gray-700">
+																<span>Total to pay:</span>
+																<span>
+																	{totalToPay.toFixed(4)} ETH
+																</span>
+															</div>
+														</div>
+													)
+												})()}
+											</div>
 
-									<button
-										type="submit"
-										disabled={supporting || !account}
-										className="w-full btn-gradient flex items-center justify-center gap-2"
-									>
-										{supporting ? (
-											<>
-												<Loader2 className="w-4 h-4 animate-spin" />
-												Processing...
-											</>
-										) : (
-											"Support Project"
-										)}
-									</button>
-
-									{!account && (
-										<p className="text-center text-sm text-red-500">
-											Please connect your wallet
-										</p>
+											<button
+												type="submit"
+												disabled={supporting}
+												className="w-full btn-gradient flex items-center justify-center gap-2"
+											>
+												{supporting ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														Processing...
+													</>
+												) : (
+													"Support Project"
+												)}
+											</button>
+											
+											<p className="text-xs text-center text-gray-500 dark:text-gray-400">
+												A 2.5% platform fee helps us maintain and improve Creatifi
+											</p>
+										</form>
 									)}
-								</form>
+								</>
 							) : (
 								<div className="text-center py-4">
 									<p className="text-green-600 dark:text-green-400 font-semibold mb-2">

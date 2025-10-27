@@ -84,12 +84,17 @@ export default function ProjectDetailPage() {
 				}
 			}
 
-			window.ethereum.on("accountsChanged", handleAccountsChanged)
+			// Register listener if available (guard against undefined)
+			if (typeof (window.ethereum as any).on === "function") {
+				;(window.ethereum as any).on("accountsChanged", handleAccountsChanged)
+			}
 
 			// Cleanup listener
 			return () => {
-				if (window.ethereum.removeListener) {
-					window.ethereum.removeListener("accountsChanged", handleAccountsChanged)
+				if (typeof (window.ethereum as any).removeListener === "function") {
+					;(window.ethereum as any).removeListener("accountsChanged", handleAccountsChanged)
+				} else if (typeof (window.ethereum as any).off === "function") {
+					;(window.ethereum as any).off("accountsChanged", handleAccountsChanged)
 				}
 			}
 		}

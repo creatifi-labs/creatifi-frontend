@@ -955,13 +955,16 @@ export default function ProjectDetailPage() {
 													if (walletButton) {
 														walletButton.click()
 													} else {
-														toast.error('⚠️ Please use the Connect Wallet button in the navigation bar')
+														toast.error('Wallet connection unavailable. Please refresh the page.', { duration: 3000 })
 													}
 												}}
 												className="btn-gradient"
 											>
 												Connect Wallet
 											</button>
+											<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+												For the best experience, we recommend using MetaMask wallet
+											</p>
 										</div>
 									) : (
 										<form onSubmit={handleSupport} className="space-y-4" key={account}>
